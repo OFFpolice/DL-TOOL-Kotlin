@@ -1,0 +1,6 @@
+{
+  "name": "DL TOOL",
+  "description": "DL-TOOL — приложение для скачивания видео с популярных платформ.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
