@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
@@ -14,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.DownloadViewModel
 import com.example.ui.theme.*
+
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun SettingsScreen(
@@ -28,10 +32,13 @@ fun SettingsScreen(
         folderInput = savedFolder
     }
 
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(DarkBg)
+            .verticalScroll(scrollState)
             .padding(16.dp)
     ) {
         // App Title text
@@ -107,7 +114,7 @@ fun SettingsScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Save,
-                            contentDescription = "Save",
+                            contentDescription = "Save Folder",
                             tint = TextWhite,
                             modifier = Modifier.size(18.dp)
                         )
@@ -131,6 +138,56 @@ fun SettingsScreen(
                             fontWeight = FontWeight.Medium
                         )
                     }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Card: Local Python Engine Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkCard)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = "Локальный движок Python",
+                    color = TextWhite,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Будет использоваться встроенный модуль Python (yt-dlp) на вашем устройстве для локальной загрузки видео, без участия удаленных API.",
+                    color = TextGray,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(Color(0xFF4CAF50), shape = RoundedCornerShape(5.dp))
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Встроенный yt-dlp активен",
+                        color = Color(0xFF4CAF50),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

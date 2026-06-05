@@ -8,8 +8,6 @@ import android.os.Environment
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.api.CobaltApiService
-import com.example.api.CobaltRequest
 import com.example.data.AppDatabase
 import com.example.data.DownloadItem
 import com.example.data.DownloadRepository
@@ -20,14 +18,18 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
 import java.security.MessageDigest
-import java.util.concurrent.TimeUnit
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
 
 class DownloadViewModel(application: Application) : AndroidViewModel(application) {
+
+    init {
+        val context = getApplication<Application>()
+        if (!Python.isStarted()) {
+            Python.start(AndroidPlatform(context))
+        }
+    }
 
     private val database = AppDatabase.getDatabase(application)
     private val repository = DownloadRepository(database.downloadDao())
@@ -51,34 +53,6 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         initialValue = emptyList()
     )
 
-    // Retrofit service setup
-    private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        })
-        .build()
-
-    private val moshi = com.squareup.moshi.Moshi.Builder()
-        .addLast(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
-        .build()
-
-    private val retrofit = Retrofit.Builder()
-        .baseUrl("https://api.cobalt.tools/") // Base fallback, request allows raw @Url
-        .client(okHttpClient)
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
-        .build()
-
-    private val apiService = retrofit.create(CobaltApiService::class.java)
-
-    // List of reliable public cobalt instances
-    private val apiEndpoints = listOf(
-        "https://api.cobalt.tools/api/json",
-        "https://cobalt.api.ryb.icu/api/json",
-        "https://co.wuk.sh/api/json"
-    )
-
     fun onUrlChange(newUrl: String) {
         urlInput.value = newUrl
     }
@@ -95,6 +69,8 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         sharedPrefs.edit().putString("download_folder", defaultPath).apply()
         Toast.makeText(getApplication(), "Сброшено по умолчанию", Toast.LENGTH_SHORT).show()
     }
+
+
 
     fun clearHistory() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -118,43 +94,73 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
-        viewModelScope.launch {
-            isLoading.value = true
-            downloadStatus.value = "Анализ ссылки..."
-            statusMessage.value = "Отправка запроса на сервер yt-dlp..."
+        viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(Dispatchers.Main) {
+                isLoading.value = true
+                downloadStatus.value = "Загрузка..."
+                statusMessage.value = "Получение информации и скачивание с помощью yt-dlp..."
+            }
 
-            var resolvedUrl: String? = null
-            var errorMsg: String? = null
+            val hash = url.md5()
+            val filename = "$hash.mp4"
+            var targetFolder = downloadFolder.value
+            if (targetFolder.isEmpty()) {
+                targetFolder = "/storage/emulated/0/Download"
+            }
+            val fullFilePath = "$targetFolder/$filename"
 
-            // Try each endpoint sequentially in case of rate limit or block
-            for (endpoint in apiEndpoints) {
-                try {
-                    val request = CobaltRequest(url = url, videoQuality = "1080", isAudioOnly = false)
-                    val response = apiService.getDownloadUrl(endpoint, request)
-                    if (response.isSuccessful && response.body() != null) {
-                        val body = response.body()!!
-                        if (body.status == "redirect" || body.status == "stream") {
-                            resolvedUrl = body.url
-                            break
-                        } else if (body.status == "error") {
-                            errorMsg = body.text ?: "Неизвестная ошибка API"
-                        }
-                    }
-                } catch (e: Exception) {
-                    errorMsg = e.localizedMessage ?: "Ошибка сети"
+            val dbItem = DownloadItem(
+                url = url,
+                title = "Видео $hash",
+                filename = filename,
+                filePath = fullFilePath,
+                status = "DOWNLOADING"
+            )
+            val dbId = repository.insertDownload(dbItem).toInt()
+
+            var success = false
+            var extractedTitle = "Видео $hash"
+            var errorMessage = "Неизвестная ошибка"
+
+            try {
+                // Get the Python instance and load our downloader script
+                val py = Python.getInstance()
+                val downloaderModule = py.getModule("downloader")
+                
+                // Call python function download_video(url, download_path, filename) -> returns dict
+                val resultPyObject = downloaderModule.callAttr("download_video", url, targetFolder, filename)
+                val resultMap = resultPyObject.asMap()
+                
+                success = resultMap[com.chaquo.python.PyObject.fromJava("success")]?.toBoolean() ?: false
+                extractedTitle = resultMap[com.chaquo.python.PyObject.fromJava("title")]?.toString() ?: ""
+                errorMessage = resultMap[com.chaquo.python.PyObject.fromJava("error")]?.toString() ?: "Ошибка yt-dlp"
+            } catch (e: Exception) {
+                success = false
+                errorMessage = e.message ?: "Ошибка инициализации Python/Chaquopy"
+            }
+
+            viewModelScope.launch(Dispatchers.Main) {
+                isLoading.value = false
+                if (success) {
+                    downloadStatus.value = "Готово к скачиванию"
+                    statusMessage.value = "Скачивание успешно завершено"
+                    urlInput.value = "" // Clear input on success
+                    Toast.makeText(getApplication(), "Скачивание завершено", Toast.LENGTH_SHORT).show()
+                } else {
+                    downloadStatus.value = "Ошибка скачивания"
+                    statusMessage.value = errorMessage
+                    Toast.makeText(getApplication(), "Ошибка: $errorMessage", Toast.LENGTH_LONG).show()
                 }
             }
 
-            if (resolvedUrl != null) {
-                downloadStatus.value = "Начало загрузки"
-                statusMessage.value = "Передано в DownloadManager"
-                startSystemDownload(url, resolvedUrl)
-                urlInput.value = "" // Clear input on success
-            } else {
-                isLoading.value = false
-                downloadStatus.value = "Ошибка скачивания"
-                statusMessage.value = errorMsg ?: "Не удалось разрешить видео-ссылку. Попробуйте еще раз."
-            }
+            // Update DB item with results
+            val updatedStatus = if (success) "COMPLETED" else "FAILED"
+            val finalTitle = if (success && extractedTitle.isNotEmpty()) extractedTitle else "Видео $hash"
+            val currentItem = allDownloads.value.find { it.id == dbId } ?: dbItem.copy(id = dbId)
+            repository.updateDownload(currentItem.copy(
+                status = updatedStatus,
+                title = finalTitle
+            ))
         }
     }
 
