@@ -60,10 +60,14 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         })
         .build()
 
+    private val moshi = com.squareup.moshi.Moshi.Builder()
+        .addLast(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
+        .build()
+
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://api.cobalt.tools/") // Base fallback, request allows raw @Url
         .client(okHttpClient)
-        .addConverterFactory(MoshiConverterFactory.create())
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
         .build()
 
     private val apiService = retrofit.create(CobaltApiService::class.java)

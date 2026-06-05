@@ -1,11 +1,13 @@
 package com.example.api
 
+import com.squareup.moshi.JsonClass
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.Url
 
+@JsonClass(generateAdapter = true)
 data class CobaltRequest(
     val url: String,
     val videoQuality: String = "1080",
@@ -13,12 +15,14 @@ data class CobaltRequest(
     val downloadMode: String = "auto"
 )
 
+@JsonClass(generateAdapter = true)
 data class PickerItem(
     val url: String,
     val type: String?,
     val quality: String?
 )
 
+@JsonClass(generateAdapter = true)
 data class CobaltResponse(
     val status: String,
     val url: String? = null,
