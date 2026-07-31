@@ -129,6 +129,7 @@ dependencies {
 
 chaquopy {
   defaultConfig {
+    buildPython("python3")
     version = "3.10"
     pip {
       install("yt-dlp")

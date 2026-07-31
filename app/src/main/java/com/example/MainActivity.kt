@@ -2,9 +2,12 @@ package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
@@ -29,10 +32,16 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme {
                 var showSplash by remember { mutableStateOf(true) }
 
-                if (showSplash) {
-                    SplashScreen(onSplashFinished = { showSplash = false })
-                } else {
-                    MainAppLayout(viewModel = viewModel)
+                Crossfade(
+                    targetState = showSplash,
+                    animationSpec = tween(durationMillis = 400),
+                    label = "splash_crossfade"
+                ) { isSplash ->
+                    if (isSplash) {
+                        SplashScreen(onSplashFinished = { showSplash = false })
+                    } else {
+                        MainAppLayout(viewModel = viewModel)
+                    }
                 }
             }
         }
@@ -41,7 +50,18 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainAppLayout(viewModel: DownloadViewModel) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabStack = remember { mutableStateListOf(0) }
+    val selectedTab = tabStack.lastOrNull() ?: 0
+
+    fun selectTab(tab: Int) {
+        if (selectedTab != tab) {
+            tabStack.add(tab)
+        }
+    }
+
+    BackHandler(enabled = tabStack.size > 1) {
+        tabStack.removeAt(tabStack.size - 1)
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -54,7 +74,7 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                 // Tab 0: Скачать (Download)
                 NavigationBarItem(
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    onClick = { selectTab(0) },
                     icon = {
                         Icon(
                             imageVector = Icons.Filled.Download,
@@ -74,7 +94,7 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                 // Tab 1: Сохранено (Saved)
                 NavigationBarItem(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = { selectTab(1) },
                     icon = {
                         Icon(
                             imageVector = Icons.Filled.Bookmark,
@@ -94,7 +114,7 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                 // Tab 2: О нас (About us)
                 NavigationBarItem(
                     selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
+                    onClick = { selectTab(2) },
                     icon = {
                         Icon(
                             imageVector = Icons.Filled.Info,
@@ -114,7 +134,7 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                 // Tab 3: Настройки (Settings)
                 NavigationBarItem(
                     selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
+                    onClick = { selectTab(3) },
                     icon = {
                         Icon(
                             imageVector = Icons.Filled.Settings,
@@ -138,14 +158,28 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            when (selectedTab) {
-                0 -> DownloadScreen(
-                    viewModel = viewModel,
-                    onNavigateToHistory = { selectedTab = 1 }
-                )
-                1 -> HistoryScreen(viewModel = viewModel)
-                2 -> AboutScreen()
-                3 -> SettingsScreen(viewModel = viewModel)
+            AnimatedContent(
+                targetState = selectedTab,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (slideInHorizontally { width -> width / 3 } + fadeIn(animationSpec = tween(250)))
+                            .togetherWith(slideOutHorizontally { width -> -width / 3 } + fadeOut(animationSpec = tween(200)))
+                    } else {
+                        (slideInHorizontally { width -> -width / 3 } + fadeIn(animationSpec = tween(250)))
+                            .togetherWith(slideOutHorizontally { width -> width / 3 } + fadeOut(animationSpec = tween(200)))
+                    }
+                },
+                label = "tab_content_transition"
+            ) { tab ->
+                when (tab) {
+                    0 -> DownloadScreen(
+                        viewModel = viewModel,
+                        onNavigateToHistory = { selectTab(1) }
+                    )
+                    1 -> HistoryScreen(viewModel = viewModel)
+                    2 -> AboutScreen()
+                    3 -> SettingsScreen(viewModel = viewModel)
+                }
             }
         }
     }

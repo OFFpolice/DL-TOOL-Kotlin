@@ -3,11 +3,17 @@ package com.example.ui.screens
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -26,7 +32,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -51,15 +59,34 @@ fun DownloadScreen(
     val loadingState by viewModel.isLoading.collectAsState()
     val videoInfo by viewModel.videoInfoState.collectAsState()
     val isDownloading by viewModel.isDownloading.collectAsState()
+    val downloadProgress by viewModel.downloadProgress.collectAsState()
     val activeTitle by viewModel.activeDownloadTitle.collectAsState()
     val activeProgressText by viewModel.activeDownloadProgressText.collectAsState()
 
+    val animatedProgress by animateFloatAsState(
+        targetValue = downloadProgress,
+        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        label = "smooth_download_progress"
+    )
+
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    if (urlVal.isNotEmpty()) {
+        BackHandler {
+            viewModel.onUrlChange("")
+        }
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(DarkBg)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            }
             .padding(16.dp)
     ) {
         // App Title text
@@ -104,6 +131,17 @@ fun DownloadScreen(
                     ),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
+                    trailingIcon = if (urlVal.isNotEmpty()) {
+                        {
+                            IconButton(onClick = { viewModel.onUrlChange("") }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Очистить",
+                                    tint = TextGray
+                                )
+                            }
+                        }
+                    } else null,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = {
                         keyboardController?.hide()
@@ -125,9 +163,17 @@ fun DownloadScreen(
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = clipboard.primaryClip
                             if (clip != null && clip.itemCount > 0) {
-                                val text = clip.getItemAt(0).text?.toString() ?: ""
-                                viewModel.onUrlChange(text)
-                                Toast.makeText(context, "Вставлено из буфера", Toast.LENGTH_SHORT).show()
+                                val text = clip.getItemAt(0).text?.toString()?.trim() ?: ""
+                                if (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("HTTP://") || text.startsWith("HTTPS://")) {
+                                    viewModel.onUrlChange(text)
+                                    if (viewModel.urlInput.value == text) {
+                                        Toast.makeText(context, "Вставлено из буфера", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Ссылка содержит недопустимые символы или эмодзи", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    Toast.makeText(context, "Ссылка должна начинаться с http:// или https://", Toast.LENGTH_SHORT).show()
+                                }
                             } else {
                                 Toast.makeText(context, "Буфер обмена пуст", Toast.LENGTH_SHORT).show()
                             }
@@ -187,75 +233,93 @@ fun DownloadScreen(
         }
 
         // Active Download Status Card with Progress Bar and Cancel Button
-        if (isDownloading) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                border = BorderStroke(1.dp, StatusBlue.copy(alpha = 0.5f))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+        AnimatedVisibility(
+            visible = isDownloading,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    border = BorderStroke(1.dp, StatusBlue.copy(alpha = 0.5f))
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
                     ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = StatusBlue,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = activeTitle.ifEmpty { "Загрузка..." },
-                                    color = TextWhite,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = StatusBlue,
+                                    strokeWidth = 2.dp
                                 )
-                                Text(
-                                    text = activeProgressText.ifEmpty { "Скачивание видео..." },
-                                    color = TextGray,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = activeTitle.ifEmpty { "Загрузка..." },
+                                        color = TextWhite,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = activeProgressText.ifEmpty { "Скачивание видео..." },
+                                        color = TextGray,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = { viewModel.cancelDownload() },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Отмена загрузки",
+                                    tint = TextGray
                                 )
                             }
                         }
 
-                        IconButton(
-                            onClick = { viewModel.cancelDownload() },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Отмена загрузки",
-                                tint = TextGray
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (animatedProgress > 0f) {
+                            LinearProgressIndicator(
+                                progress = { animatedProgress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = AccentBlue,
+                                trackColor = DarkBg
+                            )
+                        } else {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = AccentBlue,
+                                trackColor = DarkBg
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = AccentBlue,
-                        trackColor = DarkBg
-                    )
                 }
             }
         }

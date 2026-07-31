@@ -95,7 +95,7 @@ def get_video_info(url):
             "error": str(e)
         }
 
-def download_video(url, download_path, filename, format_id="best[ext=mp4]/best"):
+def download_video(url, download_path, filename, format_id="best[ext=mp4]/best", progress_listener=None):
     try:
         # Create output path if it doesn't exist
         if not os.path.exists(download_path):
@@ -107,27 +107,59 @@ def download_video(url, download_path, filename, format_id="best[ext=mp4]/best")
         # Define output template for yt-dlp
         outtmpl = os.path.join(download_path, filename)
         
+        def my_hook(d):
+            if progress_listener is not None:
+                try:
+                    if progress_listener.isCancelled():
+                        raise Exception("DOWNLOAD_CANCELLED")
+                except Exception as e:
+                    if "DOWNLOAD_CANCELLED" in str(e):
+                        raise e
+
+            if d.get('status') == 'downloading' and progress_listener is not None:
+                total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
+                downloaded = d.get('downloaded_bytes', 0)
+                percent = float((downloaded / total) * 100.0) if total > 0 else 0.0
+                speed = d.get('speed') or 0
+                try:
+                    progress_listener.onProgress(
+                        int(downloaded),
+                        int(total),
+                        float(percent),
+                        int(speed)
+                    )
+                except Exception:
+                    pass
+
         ydl_opts = {
             'format': format_id,
             'outtmpl': outtmpl,
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
+            'progress_hooks': [my_hook],
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Download and extract info
             info = ydl.extract_info(url, download=True)
-            title = info.get('title', 'Видео')
+            title = info.get('title', 'Видео') if info else 'Видео'
             return {
                 "success": True,
                 "title": title,
                 "error": ""
             }
     except Exception as e:
+        err_str = str(e)
+        if "DOWNLOAD_CANCELLED" in err_str:
+            return {
+                "success": False,
+                "title": "",
+                "error": "DOWNLOAD_CANCELLED"
+            }
         return {
             "success": False,
             "title": "",
-            "error": str(e)
+            "error": err_str
         }
 

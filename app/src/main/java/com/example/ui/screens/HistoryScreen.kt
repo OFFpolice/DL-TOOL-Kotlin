@@ -2,9 +2,14 @@ package com.example.ui.screens
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +26,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,6 +37,8 @@ import androidx.core.content.FileProvider
 import com.example.data.DownloadItem
 import com.example.ui.DownloadViewModel
 import com.example.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 @Composable
@@ -54,15 +63,13 @@ fun HistoryScreen(
         ) {
             Column {
                 AppHeaderTitle()
-                Text(
-                    text = "Сохраненные файлы",
-                    color = TextGray,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
             }
 
-            if (downloads.isNotEmpty()) {
+            AnimatedVisibility(
+                visible = downloads.isNotEmpty(),
+                enter = fadeIn() + expandHorizontally(),
+                exit = fadeOut() + shrinkHorizontally()
+            ) {
                 TextButton(
                     onClick = { viewModel.clearHistory() },
                     colors = ButtonDefaults.textButtonColors(contentColor = LightBlue)
@@ -74,53 +81,129 @@ fun HistoryScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (downloads.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Bookmark,
-                    contentDescription = "Сохранено",
-                    tint = StatusBlue,
-                    modifier = Modifier.size(52.dp)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Сохраненных файлов пока нет",
-                    color = TextWhite,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Скачанные видео и аудио появятся здесь",
-                    color = TextGray,
-                    fontSize = 13.sp
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(downloads, key = { it.id }) { item ->
-                    SavedItemCard(
-                        item = item,
-                        onClick = {
-                            openDownloadedFile(context, item)
-                        },
-                        onDelete = { viewModel.deleteItem(item.id) },
-                        onShare = {
-                            shareDownloadedVideo(context, item)
-                        }
+        Crossfade(
+            targetState = downloads.isEmpty(),
+            animationSpec = tween(durationMillis = 300),
+            label = "downloads_crossfade",
+            modifier = Modifier.weight(1f)
+        ) { isEmpty ->
+            if (isEmpty) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Bookmark,
+                        contentDescription = "Сохранено",
+                        tint = StatusBlue,
+                        modifier = Modifier.size(52.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Сохраненных файлов пока нет",
+                        color = TextWhite,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Скачанные видео и аудио появятся здесь",
+                        color = TextGray,
+                        fontSize = 13.sp
                     )
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(downloads, key = { it.id }) { item ->
+                        SavedItemCard(
+                            item = item,
+                            onClick = {
+                                openDownloadedFile(context, item)
+                            },
+                            onDelete = { viewModel.deleteItem(item.id) },
+                            onShare = {
+                                shareDownloadedVideo(context, item)
+                            },
+                            modifier = Modifier.animateItem()
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun VideoThumbnailView(
+    item: DownloadItem,
+    modifier: Modifier = Modifier
+) {
+    val file = remember(item.filePath, item.filename) {
+        findExistingFile(item)
+    }
+
+    val bitmapState = produceState<Bitmap?>(initialValue = null, key1 = file?.absolutePath) {
+        if (file != null && file.exists()) {
+            withContext(Dispatchers.IO) {
+                var retriever: MediaMetadataRetriever? = null
+                try {
+                    retriever = MediaMetadataRetriever()
+                    retriever.setDataSource(file.absolutePath)
+                    val frame = retriever.getFrameAtTime(1000000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                        ?: retriever.frameAtTime
+                    value = frame
+                } catch (e: Exception) {
+                    value = null
+                } finally {
+                    try {
+                        retriever?.release()
+                    } catch (_: Exception) {}
+                }
+            }
+        } else {
+            value = null
+        }
+    }
+
+    val bitmap = bitmapState.value
+
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = DarkButton,
+        modifier = modifier
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Превью видео",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.35f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Play",
+                        tint = TextWhite,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play",
+                    tint = StatusBlue,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }
@@ -131,14 +214,11 @@ fun SavedItemCard(
     item: DownloadItem,
     onClick: () -> Unit,
     onDelete: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val fileExists = remember(item.filePath) {
-        File(item.filePath).exists()
-    }
-
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
@@ -150,20 +230,10 @@ fun SavedItemCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = DarkButton,
-                modifier = Modifier.size(42.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Play",
-                        tint = StatusBlue,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
+            VideoThumbnailView(
+                item = item,
+                modifier = Modifier.size(width = 64.dp, height = 46.dp)
+            )
 
             Spacer(modifier = Modifier.width(12.dp))
 

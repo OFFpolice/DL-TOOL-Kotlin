@@ -18,9 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.theme.*
 
 @Composable
@@ -123,7 +125,9 @@ fun AboutScreen(
 
                 SocialLinkItem(
                     label = "Telegram",
-                    url = "https://t.me/OFFpolice",
+                    url = "https://telegram.me/OFFpolice",
+                    iconRes = R.drawable.ic_telegram,
+                    iconTint = Color(0xFF29B6F6),
                     context = context
                 )
 
@@ -131,7 +135,9 @@ fun AboutScreen(
 
                 SocialLinkItem(
                     label = "X (Twitter)",
-                    url = "https://x.com/OFFpolice",
+                    url = "https://x.com/OFFpolice2077",
+                    iconRes = R.drawable.ic_x_twitter,
+                    iconTint = Color.White,
                     context = context
                 )
 
@@ -139,7 +145,9 @@ fun AboutScreen(
 
                 SocialLinkItem(
                     label = "Instagram",
-                    url = "https://instagram.com/OFFpolice",
+                    url = "https://www.instagram.com/offpolice2077",
+                    iconRes = R.drawable.ic_instagram,
+                    iconTint = Color(0xFFE4405F),
                     context = context
                 )
             }
@@ -151,6 +159,8 @@ fun AboutScreen(
 fun SocialLinkItem(
     label: String,
     url: String,
+    iconRes: Int,
+    iconTint: Color,
     context: Context
 ) {
     Row(
@@ -173,10 +183,10 @@ fun SocialLinkItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Default.Send, // Looks exact to Telegram arrow in screen
+                painter = painterResource(id = iconRes),
                 contentDescription = label,
-                tint = StatusBlue,
-                modifier = Modifier.size(20.dp)
+                tint = iconTint,
+                modifier = Modifier.size(22.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(

@@ -87,34 +87,12 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(20.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Папка для загрузки видео",
-                        color = TextWhite,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    if (isDefault) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = AccentBlue.copy(alpha = 0.2f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, AccentBlue)
-                        ) {
-                            Text(
-                                text = "По умолчанию",
-                                color = LightBlue,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
+                Text(
+                    text = "Папка для загрузки видео",
+                    color = TextWhite,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -256,55 +234,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
 
-        // Card: Local Python Engine Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkCard)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
-            ) {
-                Text(
-                    text = "Локальный движок Python",
-                    color = TextWhite,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "Будет использоваться встроенный модуль Python (yt-dlp) на вашем устройстве для локальной загрузки видео, без участия удаленных API.",
-                    color = TextGray,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .background(Color(0xFF4CAF50), shape = RoundedCornerShape(5.dp))
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Встроенный yt-dlp активен",
-                        color = Color(0xFF4CAF50),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
     }
 
     // Folder Picker Dialog

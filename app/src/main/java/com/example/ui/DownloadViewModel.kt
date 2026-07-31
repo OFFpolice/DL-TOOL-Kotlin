@@ -41,6 +41,14 @@ data class VideoInfo(
     val formats: List<VideoFormatOption>
 )
 
+open class PyDownloadProgressListener {
+    @Volatile
+    var cancelledFlag: Boolean = false
+
+    open fun onProgress(downloadedBytes: Long, totalBytes: Long, percent: Float, speedBytesPerSec: Long) {}
+    open fun isCancelled(): Boolean = cancelledFlag
+}
+
 class DownloadViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
@@ -63,26 +71,25 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
 
     // Active Download Progress State
     val isDownloading = MutableStateFlow(false)
+    val downloadProgress = MutableStateFlow(0f)
     val activeDownloadTitle = MutableStateFlow("")
     val activeDownloadProgressText = MutableStateFlow("")
     private var activeDownloadJob: Job? = null
     private var currentFilePath: String? = null
     private var currentDbId: Int? = null
+    private var currentHash: String? = null
+    private var currentProgressListener: PyDownloadProgressListener? = null
 
     fun cancelDownload() {
+        currentProgressListener?.cancelledFlag = true
         activeDownloadJob?.cancel()
         activeDownloadJob = null
 
         val filePath = currentFilePath
+        val folder = downloadFolder.value
+        val hash = currentHash
         if (filePath != null) {
-            try {
-                val file = java.io.File(filePath)
-                if (file.exists()) {
-                    file.delete()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            deletePartialFiles(folder, hash ?: "", filePath)
         }
 
         val dbId = currentDbId
@@ -93,10 +100,38 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         }
 
         isDownloading.value = false
+        downloadProgress.value = 0f
         isLoading.value = false
         downloadStatus.value = "Загрузка отменена"
         statusMessage.value = "Вставьте ссылку и нажмите «Скачать»"
         Toast.makeText(getApplication(), "Загрузка отменена", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun deletePartialFiles(targetFolder: String, baseName: String, fullFilePath: String) {
+        try {
+            val mainFile = java.io.File(fullFilePath)
+            if (mainFile.exists()) mainFile.delete()
+
+            val partFile = java.io.File("$fullFilePath.part")
+            if (partFile.exists()) partFile.delete()
+
+            val ytdlFile = java.io.File("$fullFilePath.ytdl")
+            if (ytdlFile.exists()) ytdlFile.delete()
+
+            if (targetFolder.isNotEmpty()) {
+                val dir = java.io.File(targetFolder)
+                if (dir.exists() && dir.isDirectory) {
+                    val searchPrefix = if (baseName.isNotEmpty()) baseName.substringBeforeLast(".") else ""
+                    dir.listFiles()?.forEach { f ->
+                        if (searchPrefix.isNotEmpty() && f.name.contains(searchPrefix)) {
+                            try { f.delete() } catch (_: Exception) {}
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     companion object {
@@ -117,7 +152,40 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
     )
 
     fun onUrlChange(newUrl: String) {
-        urlInput.value = newUrl
+        val trimmed = newUrl.trim()
+        if (trimmed.isEmpty()) {
+            urlInput.value = ""
+            return
+        }
+
+        // If whole string was pasted with surrounding spaces, handle trimmed value
+        val targetUrl = if (newUrl.startsWith("http://") || newUrl.startsWith("https://") || newUrl.startsWith("HTTP://") || newUrl.startsWith("HTTPS://")) {
+            trimmed
+        } else {
+            newUrl
+        }
+
+        // Forbid spaces, control characters, emojis, or non-ASCII characters
+        for (ch in targetUrl) {
+            if (Character.isWhitespace(ch) || Character.isISOControl(ch)) return
+            val type = Character.getType(ch)
+            if (type == Character.SURROGATE.toInt() ||
+                type == Character.OTHER_SYMBOL.toInt() ||
+                type == Character.NON_SPACING_MARK.toInt() ||
+                ch.code > 127
+            ) {
+                return
+            }
+        }
+
+        val lower = targetUrl.lowercase()
+        val isBuildingHttp = "http://".startsWith(lower)
+        val isBuildingHttps = "https://".startsWith(lower)
+        val startsWithHttp = lower.startsWith("http://") || lower.startsWith("https://")
+
+        if (isBuildingHttp || isBuildingHttps || startsWithHttp) {
+            urlInput.value = targetUrl
+        }
     }
 
     fun saveDownloadFolder(newFolder: String) {
@@ -134,14 +202,61 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
 
     fun clearHistory() {
         viewModelScope.launch(Dispatchers.IO) {
-            allDownloads.value.forEach {
-                repository.deleteDownload(it)
+            allDownloads.value.forEach { item ->
+                try {
+                    val f = java.io.File(item.filePath)
+                    if (f.exists()) f.delete()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                try {
+                    MediaScannerConnection.scanFile(
+                        getApplication(),
+                        arrayOf(item.filePath),
+                        null,
+                        null
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                repository.deleteDownload(item)
             }
         }
     }
 
     fun deleteItem(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
+            val item = allDownloads.value.find { it.id == id }
+            if (item != null) {
+                try {
+                    val f1 = java.io.File(item.filePath)
+                    if (f1.exists()) {
+                        f1.delete()
+                    }
+                    val publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    val f2 = java.io.File(publicDir, item.filename)
+                    if (f2.exists()) {
+                        f2.delete()
+                    }
+                    val f3 = java.io.File(publicDir, "DL-TOOL/video/${item.filename}")
+                    if (f3.exists()) {
+                        f3.delete()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                try {
+                    MediaScannerConnection.scanFile(
+                        getApplication(),
+                        arrayOf(item.filePath),
+                        null,
+                        null
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
             repository.deleteDownloadById(id)
         }
     }
@@ -158,8 +273,15 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         val url = urlInput.value.trim()
         if (url.isEmpty()) {
             downloadStatus.value = "Ошибка"
-            statusMessage.value = "Буфер обмена пуст или ссылка некорректна"
+            statusMessage.value = "Поле ввода ссылки пустое"
             Toast.makeText(getApplication(), "Введите ссылку на видео", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("HTTP://") && !url.startsWith("HTTPS://")) {
+            downloadStatus.value = "Ошибка"
+            statusMessage.value = "Ссылка должна начинаться с http:// или https://"
+            Toast.makeText(getApplication(), "Ссылка должна начинаться с http:// или https://", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -237,17 +359,46 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         val url = info.url
         videoInfoState.value = null
 
+        val listener = object : PyDownloadProgressListener() {
+            override fun onProgress(downloadedBytes: Long, totalBytes: Long, percent: Float, speedBytesPerSec: Long) {
+                val frac = (percent / 100f).coerceIn(0f, 1f)
+                downloadProgress.value = frac
+
+                val downloadedMb = downloadedBytes / (1024.0 * 1024.0)
+                val totalMb = totalBytes / (1024.0 * 1024.0)
+
+                val speedStr = if (speedBytesPerSec < 1024 * 1024) {
+                    "%.0f КБ/с".format(speedBytesPerSec / 1024.0)
+                } else {
+                    "%.1f МБ/с".format(speedBytesPerSec / (1024.0 * 1024.0))
+                }
+
+                val text = if (totalBytes > 0) {
+                    "%.1f МБ из %.1f МБ (%.0f%%) • %s".format(downloadedMb, totalMb, percent, speedStr)
+                } else {
+                    "%.1f МБ • %s".format(downloadedMb, speedStr)
+                }
+
+                activeDownloadProgressText.value = text
+            }
+
+            override fun isCancelled(): Boolean = cancelledFlag
+        }
+        currentProgressListener = listener
+
         activeDownloadJob = viewModelScope.launch(Dispatchers.IO) {
             viewModelScope.launch(Dispatchers.Main) {
                 isLoading.value = true
                 isDownloading.value = true
+                downloadProgress.value = 0f
                 activeDownloadTitle.value = info.title.ifEmpty { "Загрузка видео..." }
-                activeDownloadProgressText.value = "Скачивание [${option.label}]..."
+                activeDownloadProgressText.value = "Подготовка к скачиванию..."
                 downloadStatus.value = "Загрузка..."
                 statusMessage.value = "Скачивание [${option.label}]..."
             }
 
             val hash = url.md5()
+            currentHash = hash
             val filename = "$hash.${option.ext}"
             var targetFolder = downloadFolder.value
             if (targetFolder.isEmpty()) {
@@ -273,7 +424,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
             try {
                 val py = Python.getInstance()
                 val downloaderModule = py.getModule("downloader")
-                val resultPyObject = downloaderModule.callAttr("download_video", url, targetFolder, filename, option.formatId)
+                val resultPyObject = downloaderModule.callAttr("download_video", url, targetFolder, filename, option.formatId, listener)
                 val resultMap = resultPyObject.asMap()
 
                 success = resultMap[com.chaquo.python.PyObject.fromJava("success")]?.toBoolean() ?: false
@@ -283,6 +434,12 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
             } catch (e: Exception) {
                 success = false
                 errorMessage = e.message ?: "Ошибка загрузки"
+            }
+
+            if (listener.cancelledFlag || errorMessage == "DOWNLOAD_CANCELLED") {
+                deletePartialFiles(targetFolder, hash, fullFilePath)
+                repository.deleteDownloadById(dbId)
+                return@launch
             }
 
             if (success) {
@@ -301,6 +458,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
             viewModelScope.launch(Dispatchers.Main) {
                 isLoading.value = false
                 isDownloading.value = false
+                downloadProgress.value = 0f
                 if (success) {
                     downloadStatus.value = "Готово к скачиванию"
                     statusMessage.value = "Скачивание успешно завершено"
