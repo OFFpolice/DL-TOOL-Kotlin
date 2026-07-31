@@ -7,8 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -71,17 +71,17 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                     )
                 )
 
-                // Tab 1: История (History)
+                // Tab 1: Сохранено (Saved)
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     icon = {
                         Icon(
-                            imageVector = Icons.Filled.History,
-                            contentDescription = "История"
+                            imageVector = Icons.Filled.Bookmark,
+                            contentDescription = "Сохранено"
                         )
                     },
-                    label = { Text("История") },
+                    label = { Text("Сохранено") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = TextWhite,
                         selectedTextColor = StatusBlue,

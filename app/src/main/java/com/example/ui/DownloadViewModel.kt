@@ -3,6 +3,7 @@ package com.example.ui
 import android.app.Application
 import android.app.DownloadManager
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
@@ -12,6 +13,7 @@ import com.example.data.AppDatabase
 import com.example.data.DownloadItem
 import com.example.data.DownloadRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +23,23 @@ import kotlinx.coroutines.launch
 import java.security.MessageDigest
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
+
+data class VideoFormatOption(
+    val formatId: String,
+    val label: String,
+    val ext: String,
+    val size: String,
+    val isAudio: Boolean
+)
+
+data class VideoInfo(
+    val url: String,
+    val title: String,
+    val thumbnail: String,
+    val uploader: String,
+    val duration: String,
+    val formats: List<VideoFormatOption>
+)
 
 class DownloadViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -40,10 +59,54 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
     val downloadStatus = MutableStateFlow("Готов к скачиванию")
     val statusMessage = MutableStateFlow("Вставьте ссылку и нажмите «Скачать»")
     val isLoading = MutableStateFlow(false)
+    val videoInfoState = MutableStateFlow<VideoInfo?>(null)
+
+    // Active Download Progress State
+    val isDownloading = MutableStateFlow(false)
+    val activeDownloadTitle = MutableStateFlow("")
+    val activeDownloadProgressText = MutableStateFlow("")
+    private var activeDownloadJob: Job? = null
+    private var currentFilePath: String? = null
+    private var currentDbId: Int? = null
+
+    fun cancelDownload() {
+        activeDownloadJob?.cancel()
+        activeDownloadJob = null
+
+        val filePath = currentFilePath
+        if (filePath != null) {
+            try {
+                val file = java.io.File(filePath)
+                if (file.exists()) {
+                    file.delete()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        val dbId = currentDbId
+        if (dbId != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                repository.deleteDownloadById(dbId)
+            }
+        }
+
+        isDownloading.value = false
+        isLoading.value = false
+        downloadStatus.value = "Загрузка отменена"
+        statusMessage.value = "Вставьте ссылку и нажмите «Скачать»"
+        Toast.makeText(getApplication(), "Загрузка отменена", Toast.LENGTH_SHORT).show()
+    }
+
+    companion object {
+        val DEFAULT_DOWNLOAD_PATH: String =
+            "${Environment.getExternalStorageDirectory().absolutePath}/Download/DL-TOOL/video"
+    }
 
     // Saved Download Folder Preferences
     val downloadFolder = MutableStateFlow(
-        sharedPrefs.getString("download_folder", "/storage/emulated/0/Download") ?: "/storage/emulated/0/Download"
+        sharedPrefs.getString("download_folder", DEFAULT_DOWNLOAD_PATH) ?: DEFAULT_DOWNLOAD_PATH
     )
 
     // Data List
@@ -60,17 +123,14 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
     fun saveDownloadFolder(newFolder: String) {
         downloadFolder.value = newFolder
         sharedPrefs.edit().putString("download_folder", newFolder).apply()
-        Toast.makeText(getApplication(), "Путь сохранен", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), "Папка сохранена", Toast.LENGTH_SHORT).show()
     }
 
     fun restoreDefaultFolder() {
-        val defaultPath = "/storage/emulated/0/Download"
-        downloadFolder.value = defaultPath
-        sharedPrefs.edit().putString("download_folder", defaultPath).apply()
-        Toast.makeText(getApplication(), "Сброшено по умолчанию", Toast.LENGTH_SHORT).show()
+        downloadFolder.value = DEFAULT_DOWNLOAD_PATH
+        sharedPrefs.edit().putString("download_folder", DEFAULT_DOWNLOAD_PATH).apply()
+        Toast.makeText(getApplication(), "Сброшено: Download/DL-TOOL/video", Toast.LENGTH_SHORT).show()
     }
-
-
 
     fun clearHistory() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -86,66 +146,166 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun dismissVideoInfo() {
+        videoInfoState.value = null
+    }
+
     fun downloadVideo() {
+        fetchVideoInfo()
+    }
+
+    fun fetchVideoInfo() {
         val url = urlInput.value.trim()
         if (url.isEmpty()) {
             downloadStatus.value = "Ошибка"
             statusMessage.value = "Буфер обмена пуст или ссылка некорректна"
+            Toast.makeText(getApplication(), "Введите ссылку на видео", Toast.LENGTH_SHORT).show()
             return
         }
 
         viewModelScope.launch(Dispatchers.IO) {
             viewModelScope.launch(Dispatchers.Main) {
                 isLoading.value = true
+                downloadStatus.value = "Получение информации..."
+                statusMessage.value = "Извлечение превью и доступных форматов..."
+            }
+
+            try {
+                val py = Python.getInstance()
+                val downloaderModule = py.getModule("downloader")
+                val resultPyObject = downloaderModule.callAttr("get_video_info", url)
+                val resultMap = resultPyObject.asMap()
+
+                val success = resultMap[com.chaquo.python.PyObject.fromJava("success")]?.toBoolean() ?: false
+                val title = resultMap[com.chaquo.python.PyObject.fromJava("title")]?.toString() ?: "Видео"
+                val thumbnail = resultMap[com.chaquo.python.PyObject.fromJava("thumbnail")]?.toString() ?: ""
+                val uploader = resultMap[com.chaquo.python.PyObject.fromJava("uploader")]?.toString() ?: ""
+                val duration = resultMap[com.chaquo.python.PyObject.fromJava("duration")]?.toString() ?: ""
+                val errorMsg = resultMap[com.chaquo.python.PyObject.fromJava("error")]?.toString() ?: "Ошибка получения данных"
+
+                if (success) {
+                    val formatsPyList = resultMap[com.chaquo.python.PyObject.fromJava("formats")]?.asList()
+                    val options = mutableListOf<VideoFormatOption>()
+
+                    formatsPyList?.forEach { item ->
+                        val itemMap = item.asMap()
+                        options.add(
+                            VideoFormatOption(
+                                formatId = itemMap[com.chaquo.python.PyObject.fromJava("format_id")]?.toString() ?: "best",
+                                label = itemMap[com.chaquo.python.PyObject.fromJava("label")]?.toString() ?: "Качество",
+                                ext = itemMap[com.chaquo.python.PyObject.fromJava("ext")]?.toString() ?: "mp4",
+                                size = itemMap[com.chaquo.python.PyObject.fromJava("size")]?.toString() ?: "Размер н/д",
+                                isAudio = itemMap[com.chaquo.python.PyObject.fromJava("is_audio")]?.toBoolean() ?: false
+                            )
+                        )
+                    }
+
+                    val info = VideoInfo(
+                        url = url,
+                        title = title,
+                        thumbnail = thumbnail,
+                        uploader = uploader,
+                        duration = duration,
+                        formats = options
+                    )
+
+                    viewModelScope.launch(Dispatchers.Main) {
+                        isLoading.value = false
+                        videoInfoState.value = info
+                    }
+                } else {
+                    viewModelScope.launch(Dispatchers.Main) {
+                        isLoading.value = false
+                        downloadStatus.value = "Ошибка"
+                        statusMessage.value = errorMsg
+                        Toast.makeText(getApplication(), "Ошибка: $errorMsg", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                viewModelScope.launch(Dispatchers.Main) {
+                    isLoading.value = false
+                    downloadStatus.value = "Ошибка"
+                    statusMessage.value = e.message ?: "Ошибка получения данных"
+                    Toast.makeText(getApplication(), "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    fun confirmDownload(option: VideoFormatOption) {
+        val info = videoInfoState.value ?: return
+        val url = info.url
+        videoInfoState.value = null
+
+        activeDownloadJob = viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(Dispatchers.Main) {
+                isLoading.value = true
+                isDownloading.value = true
+                activeDownloadTitle.value = info.title.ifEmpty { "Загрузка видео..." }
+                activeDownloadProgressText.value = "Скачивание [${option.label}]..."
                 downloadStatus.value = "Загрузка..."
-                statusMessage.value = "Получение информации и скачивание с помощью yt-dlp..."
+                statusMessage.value = "Скачивание [${option.label}]..."
             }
 
             val hash = url.md5()
-            val filename = "$hash.mp4"
+            val filename = "$hash.${option.ext}"
             var targetFolder = downloadFolder.value
             if (targetFolder.isEmpty()) {
-                targetFolder = "/storage/emulated/0/Download"
+                targetFolder = DEFAULT_DOWNLOAD_PATH
             }
             val fullFilePath = "$targetFolder/$filename"
+            currentFilePath = fullFilePath
 
             val dbItem = DownloadItem(
                 url = url,
-                title = "Видео $hash",
+                title = info.title.ifEmpty { "Видео $hash" },
                 filename = filename,
                 filePath = fullFilePath,
                 status = "DOWNLOADING"
             )
             val dbId = repository.insertDownload(dbItem).toInt()
+            currentDbId = dbId
 
             var success = false
-            var extractedTitle = "Видео $hash"
+            var extractedTitle = info.title
             var errorMessage = "Неизвестная ошибка"
 
             try {
-                // Get the Python instance and load our downloader script
                 val py = Python.getInstance()
                 val downloaderModule = py.getModule("downloader")
-                
-                // Call python function download_video(url, download_path, filename) -> returns dict
-                val resultPyObject = downloaderModule.callAttr("download_video", url, targetFolder, filename)
+                val resultPyObject = downloaderModule.callAttr("download_video", url, targetFolder, filename, option.formatId)
                 val resultMap = resultPyObject.asMap()
-                
+
                 success = resultMap[com.chaquo.python.PyObject.fromJava("success")]?.toBoolean() ?: false
-                extractedTitle = resultMap[com.chaquo.python.PyObject.fromJava("title")]?.toString() ?: ""
+                val pyTitle = resultMap[com.chaquo.python.PyObject.fromJava("title")]?.toString() ?: ""
+                if (pyTitle.isNotEmpty()) extractedTitle = pyTitle
                 errorMessage = resultMap[com.chaquo.python.PyObject.fromJava("error")]?.toString() ?: "Ошибка yt-dlp"
             } catch (e: Exception) {
                 success = false
-                errorMessage = e.message ?: "Ошибка инициализации Python/Chaquopy"
+                errorMessage = e.message ?: "Ошибка загрузки"
+            }
+
+            if (success) {
+                try {
+                    MediaScannerConnection.scanFile(
+                        getApplication(),
+                        arrayOf(fullFilePath),
+                        arrayOf("video/*", "audio/*"),
+                        null
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
 
             viewModelScope.launch(Dispatchers.Main) {
                 isLoading.value = false
+                isDownloading.value = false
                 if (success) {
                     downloadStatus.value = "Готово к скачиванию"
                     statusMessage.value = "Скачивание успешно завершено"
-                    urlInput.value = "" // Clear input on success
-                    Toast.makeText(getApplication(), "Скачивание завершено", Toast.LENGTH_SHORT).show()
+                    urlInput.value = ""
+                    Toast.makeText(getApplication(), "Скачивание завершено!", Toast.LENGTH_SHORT).show()
                 } else {
                     downloadStatus.value = "Ошибка скачивания"
                     statusMessage.value = errorMessage
@@ -153,9 +313,8 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                 }
             }
 
-            // Update DB item with results
             val updatedStatus = if (success) "COMPLETED" else "FAILED"
-            val finalTitle = if (success && extractedTitle.isNotEmpty()) extractedTitle else "Видео $hash"
+            val finalTitle = if (extractedTitle.isNotEmpty()) extractedTitle else "Видео $hash"
             val currentItem = allDownloads.value.find { it.id == dbId } ?: dbItem.copy(id = dbId)
             repository.updateDownload(currentItem.copy(
                 status = updatedStatus,

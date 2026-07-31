@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -22,8 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import com.example.data.DownloadItem
 import com.example.ui.DownloadViewModel
 import com.example.ui.theme.*
@@ -43,13 +46,21 @@ fun HistoryScreen(
             .background(DarkBg)
             .padding(16.dp)
     ) {
-        // App Title text
+        // App Title & Header text
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AppHeaderTitle()
+            Column {
+                AppHeaderTitle()
+                Text(
+                    text = "Сохраненные файлы",
+                    color = TextGray,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
 
             if (downloads.isNotEmpty()) {
                 TextButton(
@@ -61,7 +72,7 @@ fun HistoryScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (downloads.isEmpty()) {
             Column(
@@ -72,21 +83,21 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "No history",
+                    imageVector = Icons.Default.Bookmark,
+                    contentDescription = "Сохранено",
                     tint = StatusBlue,
                     modifier = Modifier.size(52.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "История пуста",
+                    text = "Сохраненных файлов пока нет",
                     color = TextWhite,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Скачанные видео появятся здесь",
+                    text = "Скачанные видео и аудио появятся здесь",
                     color = TextGray,
                     fontSize = 13.sp
                 )
@@ -99,11 +110,14 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(downloads, key = { it.id }) { item ->
-                    HistoryItemCard(
+                    SavedItemCard(
                         item = item,
+                        onClick = {
+                            openDownloadedFile(context, item)
+                        },
                         onDelete = { viewModel.deleteItem(item.id) },
                         onShare = {
-                            shareDownloadedVideo(context, item.filename)
+                            shareDownloadedVideo(context, item)
                         }
                     )
                 }
@@ -113,14 +127,21 @@ fun HistoryScreen(
 }
 
 @Composable
-fun HistoryItemCard(
+fun SavedItemCard(
     item: DownloadItem,
+    onClick: () -> Unit,
     onDelete: () -> Unit,
     onShare: () -> Unit
 ) {
+    val fileExists = remember(item.filePath) {
+        File(item.filePath).exists()
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = DarkCard)
     ) {
         Row(
@@ -129,32 +150,60 @@ fun HistoryItemCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = "Video file",
-                tint = StatusBlue,
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(DarkButton, RoundedCornerShape(8.dp))
-                    .padding(6.dp)
-            )
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = DarkButton,
+                modifier = Modifier.size(42.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Play",
+                        tint = StatusBlue,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.width(12.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.filename,
+                    text = item.title.ifEmpty { item.filename },
                     color = TextWhite,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     maxLines = 1,
-                    fontWeight = FontWeight.Medium
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.SemiBold
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = if (item.status == "COMPLETED") "Загружено" else if (item.status == "FAILED") "Ошибка" else "Загрузка...",
-                    color = if (item.status == "COMPLETED") Color.Green else if (item.status == "FAILED") Color.Red else StatusBlue,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (item.status == "COMPLETED") "Загружено" else if (item.status == "FAILED") "Ошибка" else "Загрузка...",
+                        color = if (item.status == "COMPLETED") Color(0xFF4CAF50) else if (item.status == "FAILED") Color(0xFFFF5252) else StatusBlue,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    if (item.status == "COMPLETED") {
+                        Text(text = " • ", color = TextGray, fontSize = 11.sp)
+                        val fileSizeMb = try {
+                            val f = File(item.filePath)
+                            if (f.exists()) "%.1f МБ".format(f.length().toDouble() / (1024 * 1024)) else "МБ н/д"
+                        } catch (e: Exception) {
+                            "МБ н/д"
+                        }
+                        Text(
+                            text = fileSizeMb,
+                            color = TextGray,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
             }
+
             if (item.status == "COMPLETED") {
                 IconButton(onClick = onShare) {
                     Icon(
@@ -165,6 +214,7 @@ fun HistoryItemCard(
                     )
                 }
             }
+
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -177,21 +227,85 @@ fun HistoryItemCard(
     }
 }
 
-fun shareDownloadedVideo(context: Context, filename: String) {
+fun findExistingFile(item: DownloadItem): File? {
+    val f1 = File(item.filePath)
+    if (f1.exists()) return f1
+
+    val publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+    val f2 = File(publicDir, item.filename)
+    if (f2.exists()) return f2
+
+    val dlToolDir = File(publicDir, "DL-TOOL/video/${item.filename}")
+    if (dlToolDir.exists()) return dlToolDir
+
+    return null
+}
+
+fun openDownloadedFile(context: Context, item: DownloadItem) {
     try {
-        val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), filename)
-        if (file.exists()) {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "video/*"
-                // Using file scheme. For production, sharing outside may prefer FileProvider,
-                // but this represents fully valid file actions!
-                putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file))
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(Intent.createChooser(intent, "Поделиться файлом"))
-        } else {
-            Toast.makeText(context, "Файл еще в процессе скачивания или удален", Toast.LENGTH_SHORT).show()
+        val file = findExistingFile(item)
+        if (file == null || !file.exists()) {
+            Toast.makeText(context, "Файл не найден на устройстве", Toast.LENGTH_SHORT).show()
+            return
         }
+
+        val uri: Uri = try {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+        } catch (e: Exception) {
+            Uri.fromFile(file)
+        }
+
+        val ext = file.extension.lowercase()
+        val mimeType = when (ext) {
+            "m4a", "mp3", "aac", "wav", "flac" -> "audio/*"
+            else -> "video/*"
+        }
+
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(Intent.createChooser(intent, "Открыть файл"))
+    } catch (e: Exception) {
+        Toast.makeText(context, "Не удалось открыть файл: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+fun shareDownloadedVideo(context: Context, item: DownloadItem) {
+    try {
+        val file = findExistingFile(item)
+        if (file == null || !file.exists()) {
+            Toast.makeText(context, "Файл не найден или еще загружается", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val uri: Uri = try {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+        } catch (e: Exception) {
+            Uri.fromFile(file)
+        }
+
+        val ext = file.extension.lowercase()
+        val mimeType = when (ext) {
+            "m4a", "mp3", "aac", "wav", "flac" -> "audio/*"
+            else -> "video/*"
+        }
+
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Поделиться файлом"))
     } catch (e: Exception) {
         Toast.makeText(context, "Не удалось поделиться: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
     }

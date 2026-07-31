@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
@@ -22,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -29,6 +32,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,10 +48,11 @@ fun DownloadScreen(
 ) {
     val context = LocalContext.current
     val urlVal by viewModel.urlInput.collectAsState()
-    val statusTitle by viewModel.downloadStatus.collectAsState()
-    val statusDesc by viewModel.statusMessage.collectAsState()
     val loadingState by viewModel.isLoading.collectAsState()
-    val dlsList by viewModel.allDownloads.collectAsState()
+    val videoInfo by viewModel.videoInfoState.collectAsState()
+    val isDownloading by viewModel.isDownloading.collectAsState()
+    val activeTitle by viewModel.activeDownloadTitle.collectAsState()
+    val activeProgressText by viewModel.activeDownloadProgressText.collectAsState()
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -158,9 +163,9 @@ fun DownloadScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                         shape = RoundedCornerShape(30.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp),
-                        enabled = !loadingState
+                        enabled = !loadingState && !isDownloading
                     ) {
-                        if (loadingState) {
+                        if (loadingState && !isDownloading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
                                 color = TextWhite,
@@ -181,132 +186,89 @@ fun DownloadScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Section header "Статус"
-        Text(
-            text = "Статус",
-            color = TextWhite,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
-        )
-
-        // Card 2: Status Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkCard)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+        // Active Download Status Card with Progress Bar and Cancel Button
+        if (isDownloading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCard),
+                border = BorderStroke(1.dp, StatusBlue.copy(alpha = 0.5f))
             ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Status",
-                    tint = StatusBlue,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = statusTitle,
-                        color = TextWhite,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = statusDesc,
-                        color = TextGray,
-                        fontSize = 13.sp
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = StatusBlue,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = activeTitle.ifEmpty { "Загрузка..." },
+                                    color = TextWhite,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = activeProgressText.ifEmpty { "Скачивание видео..." },
+                                    color = TextGray,
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { viewModel.cancelDownload() },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Отмена загрузки",
+                                tint = TextGray
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = AccentBlue,
+                        trackColor = DarkBg
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Section header "Последние загрузки"
-        Text(
-            text = "Последние загрузки",
-            color = TextWhite,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
-        )
-
-        // Card 3: Recent downloads container
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkCard)
-        ) {
-            if (dlsList.isEmpty()) {
-                // Empty state centered view matching screenshots
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Folder,
-                        contentDescription = "Empty",
-                        tint = StatusBlue,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .padding(bottom = 12.dp)
-                    )
-                    Text(
-                        text = "Здесь пока пусто",
-                        color = TextWhite,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Ваши скачанные видео появятся здесь",
-                        color = TextGray,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
-                    )
+        // Show Video Info Preview & Quality Selector Dialog
+        videoInfo?.let { info ->
+            VideoInfoDialog(
+                videoInfo = info,
+                onDismiss = { viewModel.dismissVideoInfo() },
+                onConfirmDownload = { selectedOption ->
+                    viewModel.confirmDownload(selectedOption)
                 }
-            } else {
-                // Show the single most recent item
-                val recentItem = dlsList.first()
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Последний скачанный файл:",
-                        color = TextGray,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    RecentDownloadItemView(item = recentItem, onDelete = {
-                        viewModel.deleteItem(recentItem.id)
-                    })
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = onNavigateToHistory,
-                        colors = ButtonDefaults.buttonColors(containerColor = DarkButton),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(text = "Вся история", color = LightBlue, fontSize = 14.sp)
-                    }
-                }
-            }
+            )
         }
     }
 }
