@@ -294,23 +294,6 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(20.dp)
             ) {
-                Text(
-                    text = "Папка для загрузки видео",
-                    color = TextWhite,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "Выберите папку для сохранения видеофайлов",
-                    color = TextGray,
-                    fontSize = 13.sp
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // Current Folder Box Display
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -342,13 +325,13 @@ fun SettingsScreen(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Текущий путь:",
+                                text = "Путь загрузки:",
                                 color = TextGray,
                                 fontSize = 11.sp
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             val rootStorage = Environment.getExternalStorageDirectory().absolutePath
-                            val displayPath = savedFolder.replace(rootStorage, "Внутренняя память")
+                            val displayPath = savedFolder.replace(rootStorage, "Память")
                             Text(
                                 text = displayPath,
                                 color = TextWhite,
@@ -364,15 +347,15 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // Folder Selection Action Buttons
-                Column(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Main Action: In-App Folder Picker
                     Button(
                         onClick = { showFolderPickerDialog = true },
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .weight(1f)
                             .height(48.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                         shape = RoundedCornerShape(12.dp)
@@ -381,13 +364,13 @@ fun SettingsScreen(
                             imageVector = Icons.Default.FolderOpen,
                             contentDescription = "Browse Folders",
                             tint = TextWhite,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Выбрать папку (Обзор)",
+                            text = "Обзор",
                             color = TextWhite,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -396,7 +379,7 @@ fun SettingsScreen(
                     OutlinedButton(
                         onClick = { safLauncher.launch(null) },
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .weight(1f)
                             .height(48.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextWhite),
                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -408,40 +391,39 @@ fun SettingsScreen(
                             tint = LightBlue,
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Системный проводник Android",
+                            text = "С.П.А",
                             color = TextWhite,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
+                }
 
-                    if (!isDefault) {
-                        // Reset to Default
-                        TextButton(
-                            onClick = { viewModel.restoreDefaultFolder() },
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                            colors = ButtonDefaults.textButtonColors(contentColor = LightBlue)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Reset",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Сбросить в Download/DL-TOOL/video",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                if (!isDefault) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // Reset to Default
+                    TextButton(
+                        onClick = { viewModel.restoreDefaultFolder() },
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        colors = ButtonDefaults.textButtonColors(contentColor = LightBlue)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Сбросить в Download/DL-TOOL/video",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
         }
-
-
     }
 
     // Folder Picker Dialog

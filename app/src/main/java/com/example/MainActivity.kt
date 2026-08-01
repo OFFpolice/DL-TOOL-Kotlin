@@ -8,15 +8,31 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ui.DownloadViewModel
 import com.example.ui.screens.*
 import com.example.ui.theme.*
@@ -82,90 +98,10 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = NavigationBarDefaults.Elevation
-            ) {
-                // Tab 0: Скачать (Download)
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectTab(0) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Download,
-                            contentDescription = "Скачать"
-                        )
-                    },
-                    label = { Text("Скачать") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = TextWhite,
-                        selectedTextColor = StatusBlue,
-                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unselectedIconColor = TextGray,
-                        unselectedTextColor = TextGray
-                    )
-                )
-
-                // Tab 1: Сохранено (Saved)
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectTab(1) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Bookmark,
-                            contentDescription = "Сохранено"
-                        )
-                    },
-                    label = { Text("Сохранено") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = TextWhite,
-                        selectedTextColor = StatusBlue,
-                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unselectedIconColor = TextGray,
-                        unselectedTextColor = TextGray
-                    )
-                )
-
-                // Tab 2: О нас (About us)
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectTab(2) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Info,
-                            contentDescription = "О нас"
-                        )
-                    },
-                    label = { Text("О нас") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = TextWhite,
-                        selectedTextColor = StatusBlue,
-                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unselectedIconColor = TextGray,
-                        unselectedTextColor = TextGray
-                    )
-                )
-
-                // Tab 3: Настройки (Settings)
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectTab(3) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = "Настройки"
-                        )
-                    },
-                    label = { Text("Настройки") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = TextWhite,
-                        selectedTextColor = StatusBlue,
-                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unselectedIconColor = TextGray,
-                        unselectedTextColor = TextGray
-                    )
-                )
-            }
+            TelegramStyleBottomBar(
+                selectedTab = selectedTab,
+                onTabSelected = { selectTab(it) }
+            )
         }
     ) { innerPadding ->
         Box(
@@ -196,6 +132,118 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                     3 -> SettingsScreen(viewModel = viewModel)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun TelegramStyleBottomBar(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(elevation = 12.dp, shape = RoundedCornerShape(32.dp), clip = false),
+            shape = RoundedCornerShape(32.dp),
+            color = Color(0xFF20262E),
+            tonalElevation = 6.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TelegramNavItem(
+                    label = "Скачать",
+                    selected = selectedTab == 0,
+                    selectedIcon = Icons.Filled.Download,
+                    unselectedIcon = Icons.Outlined.Download,
+                    onClick = { onTabSelected(0) }
+                )
+                TelegramNavItem(
+                    label = "Сохранено",
+                    selected = selectedTab == 1,
+                    selectedIcon = Icons.Filled.Bookmark,
+                    unselectedIcon = Icons.Outlined.BookmarkBorder,
+                    onClick = { onTabSelected(1) }
+                )
+                TelegramNavItem(
+                    label = "О нас",
+                    selected = selectedTab == 2,
+                    selectedIcon = Icons.Filled.Info,
+                    unselectedIcon = Icons.Outlined.Info,
+                    onClick = { onTabSelected(2) }
+                )
+                TelegramNavItem(
+                    label = "Настройки",
+                    selected = selectedTab == 3,
+                    selectedIcon = Icons.Filled.Settings,
+                    unselectedIcon = Icons.Outlined.Settings,
+                    onClick = { onTabSelected(3) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.TelegramNavItem(
+    label: String,
+    selected: Boolean,
+    selectedIcon: ImageVector,
+    unselectedIcon: ImageVector,
+    onClick: () -> Unit
+) {
+    val activeCyanBlue = Color(0xFF33A9EE)       // Telegram cyan blue accent
+    val activePillBgColor = Color(0xFF253B50)     // Telegram capsule background color (covers icon + label)
+    val unselectedWhite = Color(0xFFFFFFFF)       // Telegram unselected white
+
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .background(
+                    color = if (selected) activePillBgColor else Color.Transparent,
+                    shape = RoundedCornerShape(20.dp)
+                )
+                .padding(horizontal = 12.dp, vertical = 5.dp)
+        ) {
+            Icon(
+                imageVector = if (selected) selectedIcon else unselectedIcon,
+                contentDescription = label,
+                tint = if (selected) activeCyanBlue else unselectedWhite,
+                modifier = Modifier.size(23.dp)
+            )
+            Spacer(modifier = Modifier.height(1.dp))
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = if (selected) activeCyanBlue else unselectedWhite,
+                maxLines = 1
+            )
         }
     }
 }

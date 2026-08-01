@@ -61,16 +61,6 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
     private val repository = DownloadRepository(database.downloadDao())
     private val sharedPrefs = application.getSharedPreferences("dl_tool_prefs", Context.MODE_PRIVATE)
 
-    init {
-        val context = getApplication<Application>()
-        if (!Python.isStarted()) {
-            Python.start(AndroidPlatform(context))
-        }
-        if (sharedPrefs.getBoolean("yt_dlp_auto_check", true)) {
-            checkYtDlpVersion(isManual = false)
-        }
-    }
-
     // UI States
     val urlInput = MutableStateFlow("")
     val downloadStatus = MutableStateFlow("Готов к скачиванию")
@@ -257,6 +247,16 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    init {
+        val context = getApplication<Application>()
+        if (!Python.isStarted()) {
+            Python.start(AndroidPlatform(context))
+        }
+        if (sharedPrefs.getBoolean("yt_dlp_auto_check", true)) {
+            checkYtDlpVersion(isManual = false)
+        }
+    }
 
     fun onUrlChange(newUrl: String) {
         val trimmed = newUrl.trim()
