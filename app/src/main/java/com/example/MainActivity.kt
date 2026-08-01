@@ -145,22 +145,22 @@ fun TelegramStyleBottomBar(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 42.dp, vertical = 6.dp),
+            .padding(start = 46.dp, end = 46.dp, bottom = 20.dp, top = 8.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(elevation = 10.dp, shape = RoundedCornerShape(26.dp), clip = false),
-            shape = RoundedCornerShape(26.dp),
-            color = Color(0xFF20262E),
+                .shadow(elevation = 12.dp, shape = CircleShape, clip = false),
+            shape = CircleShape,
+            color = Color(0xFF1C2229),
             tonalElevation = 6.dp
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .height(64.dp)
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -206,7 +206,7 @@ private fun RowScope.TelegramNavItem(
     onClick: () -> Unit
 ) {
     val activeCyanBlue = Color(0xFF33A9EE)       // Telegram cyan blue accent
-    val activePillBgColor = Color(0xFF253B50)     // Telegram capsule background color (covers icon + label)
+    val activePillBgColor = Color(0xFF243B52)     // Telegram capsule background color (covers icon + label)
     val unselectedWhite = Color(0xFFFFFFFF)       // Telegram unselected white
 
     Box(
@@ -224,22 +224,24 @@ private fun RowScope.TelegramNavItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(0.92f)
                 .background(
                     color = if (selected) activePillBgColor else Color.Transparent,
-                    shape = RoundedCornerShape(20.dp)
+                    shape = CircleShape
                 )
-                .padding(horizontal = 9.dp, vertical = 4.dp)
+                .padding(vertical = 6.dp)
         ) {
             Icon(
                 imageVector = if (selected) selectedIcon else unselectedIcon,
                 contentDescription = label,
                 tint = if (selected) activeCyanBlue else unselectedWhite,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(22.dp)
             )
-            Spacer(modifier = Modifier.height(1.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = label,
-                fontSize = 10.sp,
+                fontSize = 10.5.sp,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 color = if (selected) activeCyanBlue else unselectedWhite,
                 maxLines = 1
