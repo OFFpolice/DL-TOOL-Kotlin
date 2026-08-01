@@ -1,5 +1,66 @@
 import os
+import sys
+import json
+import urllib.request
 import yt_dlp
+
+def check_ytdlp_version():
+    try:
+        current_ver = str(getattr(yt_dlp.version, '__version__', 'Неизвестно'))
+        req = urllib.request.Request(
+            "https://pypi.org/pypi/yt-dlp/json",
+            headers={"User-Agent": "DL-TOOL-AndroidApp"}
+        )
+        with urllib.request.urlopen(req, timeout=8) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            latest_ver = str(data.get("info", {}).get("version", current_ver))
+            
+            has_update = (latest_ver != current_ver)
+            
+            return {
+                "success": True,
+                "current_version": current_ver,
+                "latest_version": latest_ver,
+                "has_update": has_update,
+                "error": ""
+            }
+    except Exception as e:
+        cur_ver = str(getattr(yt_dlp.version, '__version__', 'Неизвестно'))
+        return {
+            "success": False,
+            "current_version": cur_ver,
+            "latest_version": cur_ver,
+            "has_update": False,
+            "error": str(e)
+        }
+
+def update_ytdlp_package():
+    try:
+        import importlib
+        target_dir = os.path.dirname(os.path.dirname(yt_dlp.__file__))
+        from pip._internal.cli.main import main as pip_main
+        code = pip_main(['install', '--upgrade', '--no-deps', '--target', target_dir, 'yt-dlp'])
+        
+        if code == 0:
+            importlib.reload(yt_dlp)
+            new_ver = str(getattr(yt_dlp.version, '__version__', 'Неизвестно'))
+            return {
+                "success": True,
+                "new_version": new_ver,
+                "error": ""
+            }
+        else:
+            return {
+                "success": False,
+                "new_version": "",
+                "error": f"Код ошибки pip: {code}"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "new_version": "",
+            "error": str(e)
+        }
 
 def get_video_info(url):
     try:

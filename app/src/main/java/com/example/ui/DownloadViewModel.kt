@@ -41,6 +41,12 @@ data class VideoInfo(
     val formats: List<VideoFormatOption>
 )
 
+data class YtDlpVersionInfo(
+    val currentVersion: String,
+    val latestVersion: String,
+    val hasUpdate: Boolean
+)
+
 open class PyDownloadProgressListener {
     @Volatile
     var cancelledFlag: Boolean = false
@@ -51,16 +57,19 @@ open class PyDownloadProgressListener {
 
 class DownloadViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val database = AppDatabase.getDatabase(application)
+    private val repository = DownloadRepository(database.downloadDao())
+    private val sharedPrefs = application.getSharedPreferences("dl_tool_prefs", Context.MODE_PRIVATE)
+
     init {
         val context = getApplication<Application>()
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(context))
         }
+        if (sharedPrefs.getBoolean("yt_dlp_auto_check", true)) {
+            checkYtDlpVersion(isManual = false)
+        }
     }
-
-    private val database = AppDatabase.getDatabase(application)
-    private val repository = DownloadRepository(database.downloadDao())
-    private val sharedPrefs = application.getSharedPreferences("dl_tool_prefs", Context.MODE_PRIVATE)
 
     // UI States
     val urlInput = MutableStateFlow("")
@@ -152,6 +161,94 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
     fun setBlackThemeEnabled(enabled: Boolean) {
         isBlackThemeEnabled.value = enabled
         sharedPrefs.edit().putBoolean("black_theme_enabled", enabled).apply()
+    }
+
+    // yt-dlp Version Check & Auto-update preference
+    val isYtDlpAutoCheckEnabled = MutableStateFlow(
+        sharedPrefs.getBoolean("yt_dlp_auto_check", true)
+    )
+
+    val ytDlpVersionInfo = MutableStateFlow<YtDlpVersionInfo?>(null)
+    val isCheckingYtDlp = MutableStateFlow(false)
+    val isUpdatingYtDlp = MutableStateFlow(false)
+    val showYtDlpUpdateDialog = MutableStateFlow(false)
+
+    fun setYtDlpAutoCheckEnabled(enabled: Boolean) {
+        isYtDlpAutoCheckEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("yt_dlp_auto_check", enabled).apply()
+    }
+
+    fun dismissYtDlpUpdateDialog() {
+        showYtDlpUpdateDialog.value = false
+    }
+
+    fun checkYtDlpVersion(isManual: Boolean = false) {
+        viewModelScope.launch(Dispatchers.IO) {
+            isCheckingYtDlp.value = true
+            try {
+                val py = Python.getInstance()
+                val downloader = py.getModule("downloader")
+                val res = downloader.callAttr("check_ytdlp_version")
+                val isSuccess = res.get("success")?.toBoolean() ?: false
+                val currentVer = res.get("current_version")?.toString() ?: "Неизвестно"
+                val latestVer = res.get("latest_version")?.toString() ?: currentVer
+                val hasUpdate = res.get("has_update")?.toBoolean() ?: false
+
+                val info = YtDlpVersionInfo(currentVer, latestVer, hasUpdate)
+                ytDlpVersionInfo.value = info
+
+                if (hasUpdate) {
+                    if (isManual || isYtDlpAutoCheckEnabled.value) {
+                        showYtDlpUpdateDialog.value = true
+                    }
+                } else if (isManual) {
+                    viewModelScope.launch(Dispatchers.Main) {
+                        Toast.makeText(getApplication(), "У вас установлена последняя версия yt-dlp ($currentVer)", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                if (isManual) {
+                    viewModelScope.launch(Dispatchers.Main) {
+                        Toast.makeText(getApplication(), "Ошибка проверки версии: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } finally {
+                isCheckingYtDlp.value = false
+            }
+        }
+    }
+
+    fun updateYtDlp() {
+        viewModelScope.launch(Dispatchers.IO) {
+            isUpdatingYtDlp.value = true
+            try {
+                val py = Python.getInstance()
+                val downloader = py.getModule("downloader")
+                val res = downloader.callAttr("update_ytdlp_package")
+                val isSuccess = res.get("success")?.toBoolean() ?: false
+                val newVer = res.get("new_version")?.toString() ?: ""
+                val err = res.get("error")?.toString() ?: ""
+
+                if (isSuccess && newVer.isNotEmpty()) {
+                    ytDlpVersionInfo.value = YtDlpVersionInfo(newVer, newVer, false)
+                    showYtDlpUpdateDialog.value = false
+                    viewModelScope.launch(Dispatchers.Main) {
+                        Toast.makeText(getApplication(), "yt-dlp успешно обновлен до версии $newVer!", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    viewModelScope.launch(Dispatchers.Main) {
+                        Toast.makeText(getApplication(), "Ошибка обновления yt-dlp: $err", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                viewModelScope.launch(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Ошибка обновления: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                isUpdatingYtDlp.value = false
+            }
+        }
     }
 
     // Data List

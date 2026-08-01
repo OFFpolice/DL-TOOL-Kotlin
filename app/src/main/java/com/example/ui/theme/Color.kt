@@ -12,6 +12,7 @@ val TextWhite = Color(0xFFFFFFFF)       // Primary text
 val TextGray = Color(0xFF8E9BAE)        // Secondary subtitle text
 val StatusBlue = Color(0xFF3B82F6)      // Icon info / status indicator blue
 val LightBlue = Color(0xFF60A5FA)       // Light accent link blue
+val StatusGreen = Color(0xFF22C55E)     // Success / update green color
 val BottomNavBg = Color(0xFF0D121F)     // Bottom navigation background
 
 // Pitch Black / AMOLED Theme Colors (#000000 pure black)

@@ -30,6 +30,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val isBlackTheme by viewModel.isBlackThemeEnabled.collectAsState()
+            val showYtDlpUpdateDialog by viewModel.showYtDlpUpdateDialog.collectAsState()
+            val ytDlpVersionInfo by viewModel.ytDlpVersionInfo.collectAsState()
+            val isUpdatingYtDlp by viewModel.isUpdatingYtDlp.collectAsState()
+
             MyApplicationTheme(isBlackTheme = isBlackTheme) {
                 var showSplash by remember { mutableStateOf(true) }
 
@@ -43,6 +47,16 @@ class MainActivity : ComponentActivity() {
                     } else {
                         MainAppLayout(viewModel = viewModel)
                     }
+                }
+
+                if (showYtDlpUpdateDialog && ytDlpVersionInfo != null) {
+                    YtDlpUpdateDialog(
+                        currentVersion = ytDlpVersionInfo?.currentVersion ?: "",
+                        latestVersion = ytDlpVersionInfo?.latestVersion ?: "",
+                        isUpdating = isUpdatingYtDlp,
+                        onDismiss = { viewModel.dismissYtDlpUpdateDialog() },
+                        onConfirmUpdate = { viewModel.updateYtDlp() }
+                    )
                 }
             }
         }

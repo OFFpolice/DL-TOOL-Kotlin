@@ -65,6 +65,10 @@ fun SettingsScreen(
 
     val scrollState = rememberScrollState()
     val isBlackTheme by viewModel.isBlackThemeEnabled.collectAsState()
+    val isYtDlpAutoCheck by viewModel.isYtDlpAutoCheckEnabled.collectAsState()
+    val ytDlpVersionInfo by viewModel.ytDlpVersionInfo.collectAsState()
+    val isCheckingYtDlp by viewModel.isCheckingYtDlp.collectAsState()
+    val isUpdatingYtDlp by viewModel.isUpdatingYtDlp.collectAsState()
 
     Column(
         modifier = modifier
@@ -83,81 +87,195 @@ fun SettingsScreen(
             shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(AccentBlue.copy(alpha = 0.15f), shape = RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DarkMode,
+                        contentDescription = "Black Theme",
+                        tint = AccentBlue,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Чёрный",
+                        color = TextWhite,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Чистый чёрный фон (AMOLED)",
+                        color = TextGray,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Switch(
+                    checked = isBlackTheme,
+                    onCheckedChange = { viewModel.setBlackThemeEnabled(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = TextWhite,
+                        checkedTrackColor = AccentBlue,
+                        uncheckedThumbColor = TextGray,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Card: yt-dlp Version & Auto Check Config Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(18.dp)
             ) {
-                Text(
-                    text = "Оформление приложения",
-                    color = TextWhite,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "Выберите цветовую тему интерфейса",
-                    color = TextGray,
-                    fontSize = 13.sp
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.background,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.fillMaxWidth()
+                // Row 1: Auto check toggle switch
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .size(40.dp)
+                            .background(AccentBlue.copy(alpha = 0.15f), shape = RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(AccentBlue.copy(alpha = 0.15f), shape = RoundedCornerShape(10.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DarkMode,
-                                contentDescription = "Black Theme",
-                                tint = AccentBlue,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Sync,
+                            contentDescription = "Auto Check",
+                            tint = AccentBlue,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                        Column(modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Проверка обновлений yt-dlp",
+                            color = TextWhite,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Автоматически при запуске приложения",
+                            color = TextGray,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Switch(
+                        checked = isYtDlpAutoCheck,
+                        onCheckedChange = { viewModel.setYtDlpAutoCheckEnabled(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = TextWhite,
+                            checkedTrackColor = AccentBlue,
+                            uncheckedThumbColor = TextGray,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Row 2: Manual version check and update button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(
+                                if (ytDlpVersionInfo?.hasUpdate == true) StatusGreen.copy(alpha = 0.15f) else LightBlue.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(10.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (ytDlpVersionInfo?.hasUpdate == true) Icons.Default.SystemUpdate else Icons.Default.Extension,
+                            contentDescription = "yt-dlp version",
+                            tint = if (ytDlpVersionInfo?.hasUpdate == true) StatusGreen else LightBlue,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Компонент yt-dlp",
+                            color = TextWhite,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        val currentVerStr = ytDlpVersionInfo?.currentVersion ?: "встроенный"
+                        if (ytDlpVersionInfo?.hasUpdate == true) {
                             Text(
-                                text = "Глубокий чёрный цвет",
-                                color = TextWhite,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
+                                text = "Доступно v${ytDlpVersionInfo?.latestVersion} (сейчас: $currentVerStr)",
+                                color = StatusGreen,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                        } else {
                             Text(
-                                text = "Чистый чёрный фон #000000 (AMOLED)",
+                                text = "Версия: $currentVerStr",
                                 color = TextGray,
                                 fontSize = 12.sp
                             )
                         }
+                    }
 
-                        Switch(
-                            checked = isBlackTheme,
-                            onCheckedChange = { viewModel.setBlackThemeEnabled(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = TextWhite,
-                                checkedTrackColor = AccentBlue,
-                                uncheckedThumbColor = TextGray,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                    if (isCheckingYtDlp || isUpdatingYtDlp) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = AccentBlue,
+                            strokeWidth = 2.dp
                         )
+                    } else if (ytDlpVersionInfo?.hasUpdate == true) {
+                        Button(
+                            onClick = { viewModel.updateYtDlp() },
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text("Обновить", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { viewModel.checkYtDlpVersion(isManual = true) },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextWhite),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text("Проверить", fontSize = 12.sp)
+                        }
                     }
                 }
             }
