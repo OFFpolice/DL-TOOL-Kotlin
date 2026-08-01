@@ -145,22 +145,22 @@ fun TelegramStyleBottomBar(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 42.dp, vertical = 6.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(elevation = 12.dp, shape = RoundedCornerShape(32.dp), clip = false),
-            shape = RoundedCornerShape(32.dp),
+                .shadow(elevation = 10.dp, shape = RoundedCornerShape(26.dp), clip = false),
+            shape = RoundedCornerShape(26.dp),
             color = Color(0xFF20262E),
             tonalElevation = 6.dp
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .height(52.dp)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -228,18 +228,18 @@ private fun RowScope.TelegramNavItem(
                     color = if (selected) activePillBgColor else Color.Transparent,
                     shape = RoundedCornerShape(20.dp)
                 )
-                .padding(horizontal = 12.dp, vertical = 5.dp)
+                .padding(horizontal = 9.dp, vertical = 4.dp)
         ) {
             Icon(
                 imageVector = if (selected) selectedIcon else unselectedIcon,
                 contentDescription = label,
                 tint = if (selected) activeCyanBlue else unselectedWhite,
-                modifier = Modifier.size(23.dp)
+                modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.height(1.dp))
             Text(
                 text = label,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 color = if (selected) activeCyanBlue else unselectedWhite,
                 maxLines = 1
