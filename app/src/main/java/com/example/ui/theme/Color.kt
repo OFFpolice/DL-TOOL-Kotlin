@@ -13,3 +13,10 @@ val TextGray = Color(0xFF8E9BAE)        // Secondary subtitle text
 val StatusBlue = Color(0xFF3B82F6)      // Icon info / status indicator blue
 val LightBlue = Color(0xFF60A5FA)       // Light accent link blue
 val BottomNavBg = Color(0xFF0D121F)     // Bottom navigation background
+
+// Pitch Black / AMOLED Theme Colors (#000000 pure black)
+val PitchBlackBg = Color(0xFF000000)       // Pure pitch black background
+val PitchBlackCard = Color(0xFF0C0C0C)     // Pure dark card background
+val PitchBlackButton = Color(0xFF181818)   // Pure dark button background
+val PitchBlackBorder = Color(0xFF282828)   // Dark outline border
+val PitchBlackBottomNav = Color(0xFF000000) // Pure pitch black bottom nav

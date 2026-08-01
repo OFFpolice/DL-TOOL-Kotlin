@@ -34,7 +34,7 @@ fun AboutScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkBg)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         // App Title text
@@ -46,7 +46,7 @@ fun AboutScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkCard)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier
@@ -90,7 +90,7 @@ fun AboutScreen(
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-                HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
@@ -108,7 +108,7 @@ fun AboutScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkCard)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier

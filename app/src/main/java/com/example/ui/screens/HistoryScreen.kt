@@ -52,7 +52,7 @@ fun HistoryScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkBg)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         // App Title & Header text
@@ -173,7 +173,7 @@ fun VideoThumbnailView(
 
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = DarkButton,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = modifier
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -222,7 +222,7 @@ fun SavedItemCard(
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier

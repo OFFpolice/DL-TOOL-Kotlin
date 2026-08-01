@@ -75,7 +75,7 @@ fun FolderPickerDialog(
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.82f),
             shape = RoundedCornerShape(20.dp),
-            color = DarkCard,
+            color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
         ) {
             Column(
@@ -135,7 +135,7 @@ fun FolderPickerDialog(
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = AccentBlue,
                             selectedLabelColor = TextWhite,
-                            containerColor = DarkBg,
+                            containerColor = MaterialTheme.colorScheme.background,
                             labelColor = TextGray
                         )
                     )
@@ -147,7 +147,7 @@ fun FolderPickerDialog(
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = AccentBlue,
                             selectedLabelColor = TextWhite,
-                            containerColor = DarkBg,
+                            containerColor = MaterialTheme.colorScheme.background,
                             labelColor = TextGray
                         )
                     )
@@ -159,7 +159,7 @@ fun FolderPickerDialog(
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = AccentBlue,
                             selectedLabelColor = TextWhite,
-                            containerColor = DarkBg,
+                            containerColor = MaterialTheme.colorScheme.background,
                             labelColor = TextGray
                         )
                     )
@@ -171,7 +171,7 @@ fun FolderPickerDialog(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkBg)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
                 ) {
                     Row(
                         modifier = Modifier
@@ -221,7 +221,7 @@ fun FolderPickerDialog(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .background(DarkBg, shape = RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.background, shape = RoundedCornerShape(12.dp))
                         .padding(8.dp)
                 ) {
                     LazyColumn(
@@ -299,7 +299,7 @@ fun FolderPickerDialog(
                                 Surface(
                                     onClick = { currentPath = folder.absolutePath },
                                     shape = RoundedCornerShape(8.dp),
-                                    color = DarkCard.copy(alpha = 0.5f),
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
@@ -393,7 +393,7 @@ fun FolderPickerDialog(
     if (showNewFolderDialog) {
         AlertDialog(
             onDismissRequest = { showNewFolderDialog = false },
-            containerColor = DarkCard,
+            containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = TextWhite,
             title = {
                 Text(
@@ -415,12 +415,12 @@ fun FolderPickerDialog(
                         onValueChange = { newFolderName = it },
                         modifier = Modifier.fillMaxWidth(),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = DarkBg,
-                            unfocusedContainerColor = DarkBg,
+                            focusedContainerColor = MaterialTheme.colorScheme.background,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.background,
                             focusedTextColor = TextWhite,
                             unfocusedTextColor = TextWhite,
                             focusedIndicatorColor = StatusBlue,
-                            unfocusedIndicatorColor = DarkBorder
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline
                         ),
                         shape = RoundedCornerShape(10.dp),
                         singleLine = true

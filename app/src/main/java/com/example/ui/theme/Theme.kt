@@ -16,15 +16,33 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = TextWhite,
     surfaceVariant = DarkButton,
     onSurfaceVariant = TextWhite,
-    outline = DarkBorder
+    outline = DarkBorder,
+    surfaceContainer = BottomNavBg
+)
+
+private val PitchBlackColorScheme = darkColorScheme(
+    primary = AccentBlue,
+    onPrimary = Color.White,
+    secondary = LightBlue,
+    onSecondary = Color.White,
+    background = PitchBlackBg,
+    onBackground = TextWhite,
+    surface = PitchBlackCard,
+    onSurface = TextWhite,
+    surfaceVariant = PitchBlackButton,
+    onSurfaceVariant = TextWhite,
+    outline = PitchBlackBorder,
+    surfaceContainer = PitchBlackBottomNav
 )
 
 @Composable
 fun MyApplicationTheme(
+    isBlackTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val colors = if (isBlackTheme) PitchBlackColorScheme else DarkColorScheme
     MaterialTheme(
-        colorScheme = DarkColorScheme,
+        colorScheme = colors,
         typography = Typography,
         content = content
     )

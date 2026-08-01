@@ -81,7 +81,7 @@ fun DownloadScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkBg)
+            .background(MaterialTheme.colorScheme.background)
             .pointerInput(Unit) {
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
@@ -98,7 +98,7 @@ fun DownloadScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkCard)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier
@@ -120,13 +120,13 @@ fun DownloadScreen(
                         .fillMaxWidth()
                         .height(60.dp),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = DarkBg,
-                        unfocusedContainerColor = DarkBg,
-                        disabledContainerColor = DarkBg,
+                        focusedContainerColor = MaterialTheme.colorScheme.background,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                        disabledContainerColor = MaterialTheme.colorScheme.background,
                         focusedTextColor = TextWhite,
                         unfocusedTextColor = TextWhite,
                         focusedIndicatorColor = StatusBlue,
-                        unfocusedIndicatorColor = DarkBorder,
+                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
                         cursorColor = StatusBlue
                     ),
                     shape = RoundedCornerShape(12.dp),
@@ -182,7 +182,7 @@ fun DownloadScreen(
                             .weight(1f)
                             .height(48.dp)
                             .padding(end = 8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = DarkButton),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         shape = RoundedCornerShape(30.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
@@ -243,7 +243,7 @@ fun DownloadScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, StatusBlue.copy(alpha = 0.5f))
                 ) {
                     Column(
@@ -307,7 +307,7 @@ fun DownloadScreen(
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp)),
                                 color = AccentBlue,
-                                trackColor = DarkBg
+                                trackColor = MaterialTheme.colorScheme.background
                             )
                         } else {
                             LinearProgressIndicator(
@@ -316,7 +316,7 @@ fun DownloadScreen(
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp)),
                                 color = AccentBlue,
-                                trackColor = DarkBg
+                                trackColor = MaterialTheme.colorScheme.background
                             )
                         }
                     }
@@ -363,7 +363,7 @@ fun RecentDownloadItemView(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkBg)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
     ) {
         Row(
             modifier = Modifier
@@ -377,7 +377,7 @@ fun RecentDownloadItemView(
                 tint = StatusBlue,
                 modifier = Modifier
                     .size(36.dp)
-                    .background(DarkButton, RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                     .padding(6.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))

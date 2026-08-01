@@ -64,11 +64,12 @@ fun SettingsScreen(
     }
 
     val scrollState = rememberScrollState()
+    val isBlackTheme by viewModel.isBlackThemeEnabled.collectAsState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkBg)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
             .padding(16.dp)
     ) {
@@ -76,11 +77,99 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        // Card: Appearance Theme Config Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = "Оформление приложения",
+                    color = TextWhite,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Выберите цветовую тему интерфейса",
+                    color = TextGray,
+                    fontSize = 13.sp
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.background,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(AccentBlue.copy(alpha = 0.15f), shape = RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DarkMode,
+                                contentDescription = "Black Theme",
+                                tint = AccentBlue,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Глубокий чёрный цвет",
+                                color = TextWhite,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Чистый чёрный фон #000000 (AMOLED)",
+                                color = TextGray,
+                                fontSize = 12.sp
+                            )
+                        }
+
+                        Switch(
+                            checked = isBlackTheme,
+                            onCheckedChange = { viewModel.setBlackThemeEnabled(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = TextWhite,
+                                checkedTrackColor = AccentBlue,
+                                uncheckedThumbColor = TextGray,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Card: Folder Config Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkCard)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier
@@ -107,8 +196,8 @@ fun SettingsScreen(
                 // Current Folder Box Display
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = DarkBg,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
+                    color = MaterialTheme.colorScheme.background,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -192,7 +281,7 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .height(48.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextWhite),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(

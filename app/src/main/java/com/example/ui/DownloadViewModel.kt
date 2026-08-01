@@ -144,6 +144,16 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         sharedPrefs.getString("download_folder", DEFAULT_DOWNLOAD_PATH) ?: DEFAULT_DOWNLOAD_PATH
     )
 
+    // Saved Black Theme (AMOLED) Preference
+    val isBlackThemeEnabled = MutableStateFlow(
+        sharedPrefs.getBoolean("black_theme_enabled", false)
+    )
+
+    fun setBlackThemeEnabled(enabled: Boolean) {
+        isBlackThemeEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("black_theme_enabled", enabled).apply()
+    }
+
     // Data List
     val allDownloads: StateFlow<List<DownloadItem>> = repository.allDownloads.stateIn(
         scope = viewModelScope,

@@ -29,7 +29,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            val isBlackTheme by viewModel.isBlackThemeEnabled.collectAsState()
+            MyApplicationTheme(isBlackTheme = isBlackTheme) {
                 var showSplash by remember { mutableStateOf(true) }
 
                 Crossfade(
@@ -65,10 +66,10 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = DarkBg,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(
-                containerColor = BottomNavBg,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = NavigationBarDefaults.Elevation
             ) {
                 // Tab 0: Скачать (Download)
@@ -85,7 +86,7 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = TextWhite,
                         selectedTextColor = StatusBlue,
-                        indicatorColor = DarkButton,
+                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
                         unselectedIconColor = TextGray,
                         unselectedTextColor = TextGray
                     )
@@ -105,7 +106,7 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = TextWhite,
                         selectedTextColor = StatusBlue,
-                        indicatorColor = DarkButton,
+                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
                         unselectedIconColor = TextGray,
                         unselectedTextColor = TextGray
                     )
@@ -125,7 +126,7 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = TextWhite,
                         selectedTextColor = StatusBlue,
-                        indicatorColor = DarkButton,
+                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
                         unselectedIconColor = TextGray,
                         unselectedTextColor = TextGray
                     )
@@ -145,7 +146,7 @@ fun MainAppLayout(viewModel: DownloadViewModel) {
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = TextWhite,
                         selectedTextColor = StatusBlue,
-                        indicatorColor = DarkButton,
+                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
                         unselectedIconColor = TextGray,
                         unselectedTextColor = TextGray
                     )

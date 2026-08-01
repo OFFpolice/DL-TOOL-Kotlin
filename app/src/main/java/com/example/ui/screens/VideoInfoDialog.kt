@@ -45,7 +45,7 @@ fun VideoInfoDialog(
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.85f),
             shape = RoundedCornerShape(20.dp),
-            color = DarkCard,
+            color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp
         ) {
             Column(
@@ -81,7 +81,7 @@ fun VideoInfoDialog(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkBg)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         // Thumbnail Image
@@ -187,10 +187,10 @@ fun VideoInfoDialog(
                         Surface(
                             onClick = { selectedOption = option },
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) AccentBlue.copy(alpha = 0.15f) else DarkBg,
+                            color = if (isSelected) AccentBlue.copy(alpha = 0.15f) else MaterialTheme.colorScheme.background,
                             border = androidx.compose.foundation.BorderStroke(
                                 width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) AccentBlue else DarkBorder
+                                color = if (isSelected) AccentBlue else MaterialTheme.colorScheme.outline
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -237,7 +237,7 @@ fun VideoInfoDialog(
 
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = if (isSelected) AccentBlue else DarkCard
+                                    color = if (isSelected) AccentBlue else MaterialTheme.colorScheme.surface
                                 ) {
                                     Text(
                                         text = option.size,
