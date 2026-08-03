@@ -230,19 +230,27 @@ fun SettingsScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
-                        val currentVerStr = ytDlpVersionInfo?.currentVersion ?: "встроенный"
+                        val currentVerStr = ytDlpVersionInfo?.currentVersion ?: "загрузка..."
                         if (ytDlpVersionInfo?.hasUpdate == true) {
                             Text(
-                                text = "Доступно v${ytDlpVersionInfo?.latestVersion} (сейчас: $currentVerStr)",
+                                text = "Доступно v${ytDlpVersionInfo?.latestVersion} (сейчас: v$currentVerStr)",
                                 color = StatusGreen,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         } else {
                             Text(
-                                text = "Версия: $currentVerStr",
+                                text = if (currentVerStr != "загрузка...") "Версия: v$currentVerStr" else "Версия: загрузка...",
                                 color = TextGray,
                                 fontSize = 12.sp
+                            )
+                        }
+                        if (!ytDlpVersionInfo?.lastCheckTime.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Проверено: ${ytDlpVersionInfo?.lastCheckTime}",
+                                color = TextGray.copy(alpha = 0.7f),
+                                fontSize = 10.sp
                             )
                         }
                     }

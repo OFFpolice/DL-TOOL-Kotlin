@@ -1,68 +1,121 @@
 import os
 import sys
 import json
+import re
 import urllib.request
-import subprocess
-
-# Disable native subprocess executions to prevent Chaquopy _posixsubprocess SIGSEGV on Android
-def _disabled_popen(*args, **kwargs):
-    raise FileNotFoundError("Subprocesses are not available on Android")
-
-subprocess.Popen = _disabled_popen
-
 import yt_dlp
 
+def parse_version_tuple(ver_str):
+    if not ver_str:
+        return ()
+    nums = re.findall(r'\d+', str(ver_str))
+    return tuple(int(n) for n in nums)
+
 def check_ytdlp_version():
+    cur_ver = str(getattr(yt_dlp.version, '__version__', 'Неизвестно'))
+    cur_tuple = parse_version_tuple(cur_ver)
+    
+    latest_ver = cur_ver
+    error_msg = ""
+    
+    # Primary check via PyPI
     try:
-        current_ver = str(getattr(yt_dlp.version, '__version__', 'Неизвестно'))
         req = urllib.request.Request(
             "https://pypi.org/pypi/yt-dlp/json",
-            headers={"User-Agent": "DL-TOOL-AndroidApp"}
+            headers={"User-Agent": "DL-TOOL-AndroidApp/1.0"}
         )
         with urllib.request.urlopen(req, timeout=8) as response:
             data = json.loads(response.read().decode('utf-8'))
-            latest_ver = str(data.get("info", {}).get("version", current_ver))
-            
-            has_update = (latest_ver != current_ver)
-            
-            return {
-                "success": True,
-                "current_version": current_ver,
-                "latest_version": latest_ver,
-                "has_update": has_update,
-                "error": ""
-            }
-    except Exception as e:
-        cur_ver = str(getattr(yt_dlp.version, '__version__', 'Неизвестно'))
-        return {
-            "success": False,
-            "current_version": cur_ver,
-            "latest_version": cur_ver,
-            "has_update": False,
-            "error": str(e)
-        }
+            latest_ver = str(data.get("info", {}).get("version", cur_ver))
+    except Exception as e1:
+        # Fallback check via GitHub Releases API
+        try:
+            req_gh = urllib.request.Request(
+                "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest",
+                headers={"User-Agent": "DL-TOOL-AndroidApp/1.0", "Accept": "application/vnd.github.v3+json"}
+            )
+            with urllib.request.urlopen(req_gh, timeout=8) as resp_gh:
+                data_gh = json.loads(resp_gh.read().decode('utf-8'))
+                tag_name = data_gh.get("tag_name", "")
+                if tag_name:
+                    latest_ver = tag_name.lstrip('v')
+        except Exception as e2:
+            error_msg = f"PyPI: {str(e1)}, GitHub: {str(e2)}"
+
+    latest_tuple = parse_version_tuple(latest_ver)
+    has_update = bool(latest_tuple and cur_tuple and latest_tuple > cur_tuple)
+
+    return {
+        "success": bool(latest_ver and not (error_msg and latest_ver == cur_ver)),
+        "current_version": cur_ver,
+        "latest_version": latest_ver,
+        "has_update": has_update,
+        "error": error_msg
+    }
 
 def update_ytdlp_package():
     try:
         import importlib
-        target_dir = os.path.dirname(os.path.dirname(yt_dlp.__file__))
-        from pip._internal.cli.main import main as pip_main
-        code = pip_main(['install', '--upgrade', '--no-deps', '--target', target_dir, 'yt-dlp'])
-        
-        if code == 0:
-            importlib.reload(yt_dlp)
-            new_ver = str(getattr(yt_dlp.version, '__version__', 'Неизвестно'))
-            return {
-                "success": True,
-                "new_version": new_ver,
-                "error": ""
-            }
-        else:
-            return {
-                "success": False,
-                "new_version": "",
-                "error": f"Код ошибки pip: {code}"
-            }
+        import zipfile
+        import shutil
+
+        target_dir = os.path.dirname(os.path.dirname(os.path.abspath(yt_dlp.__file__)))
+        pip_success = False
+
+        # Method 1: Try pip internal CLI
+        try:
+            from pip._internal.cli.main import main as pip_main
+            code = pip_main(['install', '--upgrade', '--no-deps', '--target', target_dir, 'yt-dlp'])
+            if code == 0:
+                pip_success = True
+        except Exception:
+            pip_success = False
+
+        # Method 2: Direct Wheel download & extract from PyPI if pip failed
+        if not pip_success:
+            req = urllib.request.Request(
+                "https://pypi.org/pypi/yt-dlp/json",
+                headers={"User-Agent": "DL-TOOL-AndroidApp/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=15) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                urls = data.get("urls", [])
+                whl_url = None
+                for u in urls:
+                    if u.get("filename", "").endswith(".whl"):
+                        whl_url = u.get("url")
+                        break
+                if not whl_url and urls:
+                    whl_url = urls[0].get("url")
+
+                if not whl_url:
+                    return {
+                        "success": False,
+                        "new_version": "",
+                        "error": "Ссылка на пакет обновления не найдена"
+                    }
+
+                whl_req = urllib.request.Request(whl_url, headers={"User-Agent": "DL-TOOL-AndroidApp/1.0"})
+                temp_whl = os.path.join(target_dir, "temp_ytdlp.whl")
+                with urllib.request.urlopen(whl_req, timeout=30) as whl_resp, open(temp_whl, "wb") as f_out:
+                    shutil.copyfileobj(whl_resp, f_out)
+
+                with zipfile.ZipFile(temp_whl, 'r') as zip_ref:
+                    for member in zip_ref.namelist():
+                        if member.startswith("yt_dlp/"):
+                            zip_ref.extract(member, target_dir)
+
+                if os.path.exists(temp_whl):
+                    os.remove(temp_whl)
+
+        importlib.invalidate_caches()
+        importlib.reload(yt_dlp)
+        new_ver = str(getattr(yt_dlp.version, '__version__', 'Неизвестно'))
+        return {
+            "success": True,
+            "new_version": new_ver,
+            "error": ""
+        }
     except Exception as e:
         return {
             "success": False,
@@ -86,10 +139,6 @@ def get_video_info(url):
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
-            'no_color': True,
-            'ffmpeg_location': None,
-            'hls_prefer_native': True,
-            'skip_download': True,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -272,12 +321,6 @@ def download_video(url, download_path, filename, format_id="best[ext=mp4]/best",
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
-            'no_color': True,
-            'ffmpeg_location': None,
-            'hls_prefer_native': True,
-            'nopart': True,
-            'fixup': 'never',
-            'concurrent_fragment_downloads': 1,
             'progress_hooks': [my_hook],
         }
         

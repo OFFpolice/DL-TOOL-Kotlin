@@ -44,7 +44,8 @@ data class VideoInfo(
 data class YtDlpVersionInfo(
     val currentVersion: String,
     val latestVersion: String,
-    val hasUpdate: Boolean
+    val hasUpdate: Boolean,
+    val lastCheckTime: String = ""
 )
 
 open class PyDownloadProgressListener {
@@ -167,6 +168,12 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         showYtDlpUpdateDialog.value = false
     }
 
+    private fun formatCheckTime(timeMs: Long): String {
+        if (timeMs <= 0) return ""
+        val sdf = java.text.SimpleDateFormat("dd MMM, HH:mm", java.util.Locale("ru"))
+        return sdf.format(java.util.Date(timeMs))
+    }
+
     fun checkYtDlpVersion(isManual: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             isCheckingYtDlp.value = true
@@ -178,8 +185,11 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                 val currentVer = res.get("current_version")?.toString() ?: "Неизвестно"
                 val latestVer = res.get("latest_version")?.toString() ?: currentVer
                 val hasUpdate = res.get("has_update")?.toBoolean() ?: false
+                val now = System.currentTimeMillis()
+                sharedPrefs.edit().putLong("yt_dlp_last_check", now).apply()
+                val checkTimeStr = formatCheckTime(now)
 
-                val info = YtDlpVersionInfo(currentVer, latestVer, hasUpdate)
+                val info = YtDlpVersionInfo(currentVer, latestVer, hasUpdate, checkTimeStr)
                 ytDlpVersionInfo.value = info
 
                 if (hasUpdate) {
@@ -216,10 +226,13 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                 val err = res.get("error")?.toString() ?: ""
 
                 if (isSuccess && newVer.isNotEmpty()) {
-                    ytDlpVersionInfo.value = YtDlpVersionInfo(newVer, newVer, false)
+                    val now = System.currentTimeMillis()
+                    sharedPrefs.edit().putLong("yt_dlp_last_check", now).apply()
+                    val checkTimeStr = formatCheckTime(now)
+                    ytDlpVersionInfo.value = YtDlpVersionInfo(newVer, newVer, false, checkTimeStr)
                     showYtDlpUpdateDialog.value = false
                     viewModelScope.launch(Dispatchers.Main) {
-                        Toast.makeText(getApplication(), "yt-dlp успешно обновлен до версии $newVer!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(getApplication(), "yt-dlp успешно обновлен до версии v$newVer!", Toast.LENGTH_LONG).show()
                     }
                 } else {
                     viewModelScope.launch(Dispatchers.Main) {
