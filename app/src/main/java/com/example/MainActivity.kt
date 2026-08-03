@@ -153,7 +153,7 @@ fun TelegramStyleBottomBar(
                 .fillMaxWidth()
                 .shadow(elevation = 12.dp, shape = CircleShape, clip = false),
             shape = CircleShape,
-            color = Color(0xFF1C2229),
+            color = MaterialTheme.colorScheme.surfaceContainer,
             tonalElevation = 6.dp
         ) {
             Row(
