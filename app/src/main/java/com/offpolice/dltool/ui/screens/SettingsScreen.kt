@@ -324,8 +324,7 @@ fun SettingsScreen(
                                 fontSize = 11.sp
                             )
                             Spacer(modifier = Modifier.height(2.dp))
-                            val rootStorage = Environment.getExternalStorageDirectory().absolutePath
-                            val displayPath = savedFolder.replace(rootStorage, "Память")
+                            val displayPath = savedFolder.removePrefix("/")
                             Text(
                                 text = displayPath,
                                 color = TextWhite,
@@ -406,7 +405,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Сбросить в Download/DL-TOOL/video",
+                            text = "Сбросить в Download/DL-TOOL",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )

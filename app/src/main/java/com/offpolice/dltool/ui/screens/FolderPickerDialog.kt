@@ -121,7 +121,7 @@ fun FolderPickerDialog(
                     FilterChip(
                         selected = currentPath == defaultDownloadPath,
                         onClick = { currentPath = defaultDownloadPath },
-                        label = { Text("DL-TOOL/video", fontSize = 12.sp) },
+                        label = { Text("DL-TOOL", fontSize = 12.sp) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Folder,
@@ -183,7 +183,7 @@ fun FolderPickerDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = currentPath.replace(rootStoragePath, "Внутренняя память"),
+                            text = currentPath.removePrefix("/"),
                             color = TextWhite,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,

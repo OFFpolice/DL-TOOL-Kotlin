@@ -1,9 +1,16 @@
 package com.offpolice.dltool.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,9 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,7 +42,7 @@ fun VideoInfoDialog(
     onConfirmDownload: (VideoFormatOption) -> Unit
 ) {
     var selectedOption by remember {
-        mutableStateOf(videoInfo.formats.firstOrNull() ?: VideoFormatOption("best", "Максимальное качество (MP4)", "mp4", "Авто", false))
+        mutableStateOf(videoInfo.formats.firstOrNull() ?: VideoFormatOption("best", "Максимальное (MP4)", "mp4", "Авто", false))
     }
 
     Dialog(
@@ -42,50 +51,71 @@ fun VideoInfoDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.85f),
-            shape = RoundedCornerShape(20.dp),
+                .fillMaxWidth(0.94f)
+                .wrapContentHeight(),
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp
+            tonalElevation = 10.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
+                    .fillMaxWidth()
+                    .padding(18.dp)
             ) {
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Информация о видео",
-                        color = TextWhite,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(AccentBlue.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.HighQuality,
+                                contentDescription = null,
+                                tint = AccentBlue,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
 
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = TextGray
+                        Text(
+                            text = "Выберите качество",
+                            color = TextWhite,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Video Info Compact Preview Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Thumbnail Box
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(150.dp)
+                                .width(100.dp)
+                                .height(64.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(Color.Black),
                             contentAlignment = Alignment.Center
@@ -100,145 +130,166 @@ fun VideoInfoDialog(
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.PlayCircle,
-                                    contentDescription = "Video",
+                                    contentDescription = null,
                                     tint = AccentBlue,
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(10.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = videoInfo.title,
+                                color = TextWhite,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                lineHeight = 16.sp
+                            )
+
+                            if (videoInfo.uploader.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = videoInfo.uploader,
+                                    color = TextGray,
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
 
                             if (videoInfo.duration.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+
                                 Surface(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(8.dp),
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color.Black.copy(alpha = 0.8f)
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
                                 ) {
-                                    Text(
-                                        text = videoInfo.duration,
-                                        color = TextWhite,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Schedule,
+                                            contentDescription = null,
+                                            tint = TextGray,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = videoInfo.duration,
+                                            color = TextGray,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Text(
-                            text = videoInfo.title,
-                            color = TextWhite,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        if (videoInfo.uploader.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = "Author",
-                                    tint = TextGray,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = videoInfo.uploader,
-                                    color = TextGray,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Выберите качество и формат:",
-                    color = TextWhite,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = "Доступные форматы:",
+                    color = TextGray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                LazyColumn(
+                // 2-Column Grid of Quality Cards
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp)
                 ) {
                     items(videoInfo.formats) { option ->
                         val isSelected = option.formatId == selectedOption.formatId
 
+                        val cardBg by animateColorAsState(
+                            targetValue = if (isSelected) AccentBlue.copy(alpha = 0.18f) else MaterialTheme.colorScheme.background,
+                            animationSpec = tween(150), label = "bg"
+                        )
+
+                        val borderColor by animateColorAsState(
+                            targetValue = if (isSelected) AccentBlue else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            animationSpec = tween(150), label = "border"
+                        )
+
                         Surface(
                             onClick = { selectedOption = option },
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) AccentBlue.copy(alpha = 0.15f) else MaterialTheme.colorScheme.background,
-                            border = androidx.compose.foundation.BorderStroke(
-                                width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) AccentBlue else MaterialTheme.colorScheme.outline
-                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            color = cardBg,
+                            border = BorderStroke(if (isSelected) 1.8.dp else 1.dp, borderColor),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = { selectedOption = option },
-                                    colors = RadioButtonDefaults.colors(
-                                        selectedColor = AccentBlue,
-                                        unselectedColor = TextGray
-                                    )
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    // Icon indicator
+                                    Box(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                if (option.isAudio) StatusGreen.copy(alpha = 0.15f)
+                                                else if (isSelected) AccentBlue.copy(alpha = 0.25f)
+                                                else MaterialTheme.colorScheme.surface
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (option.isAudio) Icons.Default.Audiotrack else Icons.Default.Movie,
+                                            contentDescription = null,
+                                            tint = if (option.isAudio) StatusGreen else if (isSelected) AccentBlue else LightBlue,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
 
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                Icon(
-                                    imageVector = if (option.isAudio) Icons.Default.Audiotrack else Icons.Default.Movie,
-                                    contentDescription = null,
-                                    tint = if (isSelected) AccentBlue else TextGray,
-                                    modifier = Modifier.size(20.dp)
-                                )
-
-                                Spacer(modifier = Modifier.width(10.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = option.label,
-                                        color = TextWhite,
-                                        fontSize = 13.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Расширение: .${option.ext.lowercase()}",
-                                        color = TextGray,
-                                        fontSize = 11.sp
-                                    )
+                                    Column {
+                                        Text(
+                                            text = option.label,
+                                            color = TextWhite,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = if (option.size.isNotEmpty()) "${option.ext.uppercase()} • ${option.size}" else option.ext.uppercase(),
+                                            color = if (isSelected) LightBlue else TextGray,
+                                            fontSize = 10.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
 
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = if (isSelected) AccentBlue else MaterialTheme.colorScheme.surface
-                                ) {
-                                    Text(
-                                        text = option.size,
-                                        color = TextWhite,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Selected",
+                                        tint = AccentBlue,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -248,35 +299,44 @@ fun VideoInfoDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Bottom Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Отмена", color = TextGray)
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextGray),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Text("Отмена", fontSize = 13.sp)
                     }
-
-                    Spacer(modifier = Modifier.width(8.dp))
 
                     Button(
                         onClick = { onConfirmDownload(selectedOption) },
                         colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.height(44.dp)
+                        modifier = Modifier
+                            .weight(1.5f)
+                            .height(44.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Download,
                             contentDescription = "Download",
                             tint = TextWhite,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Скачать",
                             color = TextWhite,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 13.sp
                         )
                     }
                 }

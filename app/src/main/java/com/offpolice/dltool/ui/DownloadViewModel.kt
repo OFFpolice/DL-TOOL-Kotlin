@@ -133,7 +133,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         val DEFAULT_DOWNLOAD_PATH: String =
-            "${Environment.getExternalStorageDirectory().absolutePath}/Download/DL-TOOL/video"
+            "${Environment.getExternalStorageDirectory().absolutePath}/Download/DL-TOOL"
     }
 
     val downloadFolder = MutableStateFlow(
@@ -298,7 +298,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
     fun restoreDefaultFolder() {
         downloadFolder.value = DEFAULT_DOWNLOAD_PATH
         sharedPrefs.edit().putString("download_folder", DEFAULT_DOWNLOAD_PATH).apply()
-        Toast.makeText(getApplication(), "Сброшено: Download/DL-TOOL/video", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), "Сброшено: Download/DL-TOOL", Toast.LENGTH_SHORT).show()
     }
 
     fun clearHistory() {
@@ -339,7 +339,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                     if (f2.exists()) {
                         f2.delete()
                     }
-                    val f3 = java.io.File(publicDir, "DL-TOOL/video/${item.filename}")
+                    val f3 = java.io.File(publicDir, "DL-TOOL/${item.filename}")
                     if (f3.exists()) {
                         f3.delete()
                     }
@@ -457,6 +457,10 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
 
     fun confirmDownload(option: VideoFormatOption) {
         val info = videoInfoState.value ?: return
+        if (option.formatId == "thumbnail") {
+            downloadThumbnail(info.thumbnail, info.title)
+            return
+        }
         val url = info.url
         videoInfoState.value = null
 
@@ -465,8 +469,8 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                 val frac = (percent / 100f).coerceIn(0f, 1f)
                 downloadProgress.value = frac
 
-                val downloadedMb = downloadedBytes / (1024.0 * 1024.0)
-                val totalMb = totalBytes / (1024.0 * 1024.0)
+                val downloadedStr = formatBytes(downloadedBytes)
+                val totalStr = formatBytes(totalBytes)
 
                 val speedStr = if (speedBytesPerSec < 1024 * 1024) {
                     "%.0f КБ/с".format(speedBytesPerSec / 1024.0)
@@ -475,9 +479,9 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                 }
 
                 val text = if (totalBytes > 0) {
-                    "%.1f МБ из %.1f МБ (%.0f%%) • %s".format(downloadedMb, totalMb, percent, speedStr)
+                    "$downloadedStr из $totalStr (%.0f%%) • $speedStr".format(percent)
                 } else {
-                    "%.1f МБ • %s".format(downloadedMb, speedStr)
+                    "$downloadedStr • $speedStr"
                 }
 
                 activeDownloadProgressText.value = text
@@ -579,6 +583,92 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                 status = updatedStatus,
                 title = finalTitle
             ))
+        }
+    }
+
+    fun downloadThumbnail(thumbnailUrl: String, title: String) {
+        val info = videoInfoState.value
+        val url = thumbnailUrl.ifEmpty { info?.thumbnail.orEmpty() }
+        val videoTitle = (if (title.isNotEmpty()) title else info?.title.orEmpty()).ifEmpty { "Превью" }
+        videoInfoState.value = null
+
+        if (url.isEmpty()) {
+            Toast.makeText(getApplication(), "Ссылка на превью отсутствует", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        activeDownloadJob = viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(Dispatchers.Main) {
+                isLoading.value = true
+                isDownloading.value = true
+                downloadProgress.value = 0.3f
+                activeDownloadTitle.value = "Загрузка превью: $videoTitle"
+                activeDownloadProgressText.value = "Сохранение обложки..."
+                downloadStatus.value = "Загрузка..."
+                statusMessage.value = "Скачивание обложки..."
+            }
+
+            val safeTitle = videoTitle.replace(Regex("[^a-zA-Z0-9а-яА-Я_\\-]"), "_").take(30)
+            val hash = System.currentTimeMillis().toString().takeLast(6)
+            val filename = "preview_${safeTitle}_$hash.jpg"
+
+            var targetFolder = downloadFolder.value
+            if (targetFolder.isEmpty()) {
+                targetFolder = DEFAULT_DOWNLOAD_PATH
+            }
+            val folderFile = java.io.File(targetFolder)
+            if (!folderFile.exists()) {
+                folderFile.mkdirs()
+            }
+            val fullFilePath = "$targetFolder/$filename"
+
+            val dbItem = DownloadItem(
+                url = url,
+                title = "Превью: $videoTitle",
+                filename = filename,
+                filePath = fullFilePath,
+                status = "DOWNLOADING"
+            )
+            val dbId = repository.insertDownload(dbItem).toInt()
+
+            var success = false
+            var errorMessage = "Не удалось сохранить превью"
+
+            try {
+                val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 10000
+                conn.readTimeout = 10000
+                conn.instanceFollowRedirects = true
+                conn.inputStream.use { input ->
+                    java.io.File(fullFilePath).outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                success = java.io.File(fullFilePath).length() > 0
+            } catch (e: Exception) {
+                errorMessage = e.localizedMessage ?: "Ошибка скачивания"
+            }
+
+            val savedItem = dbItem.copy(
+                id = dbId,
+                status = if (success) "COMPLETED" else "FAILED"
+            )
+            repository.updateDownload(savedItem)
+
+            viewModelScope.launch(Dispatchers.Main) {
+                isLoading.value = false
+                isDownloading.value = false
+                downloadProgress.value = if (success) 1.0f else 0f
+                if (success) {
+                    downloadStatus.value = "Завершено"
+                    statusMessage.value = "Превью сохранено!"
+                    Toast.makeText(getApplication(), "Превью сохранено: $filename", Toast.LENGTH_SHORT).show()
+                } else {
+                    downloadStatus.value = "Ошибка"
+                    statusMessage.value = "Ошибка: $errorMessage"
+                    Toast.makeText(getApplication(), "Ошибка: $errorMessage", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -703,6 +793,16 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                     statusMessage.value = "Вставьте ссылку и нажмите «Скачать»"
                 }
             }
+        }
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        if (bytes <= 0) return "0 Б"
+        return when {
+            bytes < 1024 -> "$bytes Б"
+            bytes < 1024 * 1024 -> "%.0f КБ".format(bytes / 1024.0)
+            bytes < 1024 * 1024 * 1024 -> "%.1f МБ".format(bytes / (1024.0 * 1024.0))
+            else -> "%.2f ГБ".format(bytes / (1024.0 * 1024.0 * 1024.0))
         }
     }
 

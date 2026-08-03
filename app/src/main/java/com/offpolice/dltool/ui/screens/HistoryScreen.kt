@@ -258,14 +258,22 @@ fun SavedItemCard(
 
                     if (item.status == "COMPLETED") {
                         Text(text = " • ", color = TextGray, fontSize = 11.sp)
-                        val fileSizeMb = try {
+                        val fileSizeFormatted = try {
                             val f = File(item.filePath)
-                            if (f.exists()) "%.1f МБ".format(f.length().toDouble() / (1024 * 1024)) else "МБ н/д"
+                            if (f.exists()) {
+                                val b = f.length()
+                                when {
+                                    b < 1024 -> "$b Б"
+                                    b < 1024 * 1024 -> "%.0f КБ".format(b / 1024.0)
+                                    b < 1024 * 1024 * 1024 -> "%.1f МБ".format(b / (1024.0 * 1024.0))
+                                    else -> "%.2f ГБ".format(b / (1024.0 * 1024.0 * 1024.0))
+                                }
+                            } else "Файл не найден"
                         } catch (e: Exception) {
-                            "МБ н/д"
+                            "Размер н/д"
                         }
                         Text(
-                            text = fileSizeMb,
+                            text = fileSizeFormatted,
                             color = TextGray,
                             fontSize = 11.sp
                         )
@@ -304,8 +312,11 @@ fun findExistingFile(item: DownloadItem): File? {
     val f2 = File(publicDir, item.filename)
     if (f2.exists()) return f2
 
-    val dlToolDir = File(publicDir, "DL-TOOL/video/${item.filename}")
+    val dlToolDir = File(publicDir, "DL-TOOL/${item.filename}")
     if (dlToolDir.exists()) return dlToolDir
+
+    val dlToolOldDir = File(publicDir, "DL-TOOL/video/${item.filename}")
+    if (dlToolOldDir.exists()) return dlToolOldDir
 
     return null
 }
