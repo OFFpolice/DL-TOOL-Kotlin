@@ -589,11 +589,11 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
     fun downloadThumbnail(thumbnailUrl: String, title: String) {
         val info = videoInfoState.value
         val url = thumbnailUrl.ifEmpty { info?.thumbnail.orEmpty() }
-        val videoTitle = (if (title.isNotEmpty()) title else info?.title.orEmpty()).ifEmpty { "Превью" }
+        val videoTitle = (if (title.isNotEmpty()) title else info?.title.orEmpty()).ifEmpty { "Обложка" }
         videoInfoState.value = null
 
         if (url.isEmpty()) {
-            Toast.makeText(getApplication(), "Ссылка на превью отсутствует", Toast.LENGTH_SHORT).show()
+            Toast.makeText(getApplication(), "Ссылка на обложку отсутствует", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -602,7 +602,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                 isLoading.value = true
                 isDownloading.value = true
                 downloadProgress.value = 0.3f
-                activeDownloadTitle.value = "Загрузка превью: $videoTitle"
+                activeDownloadTitle.value = "Загрузка обложки: $videoTitle"
                 activeDownloadProgressText.value = "Сохранение обложки..."
                 downloadStatus.value = "Загрузка..."
                 statusMessage.value = "Скачивание обложки..."
@@ -610,7 +610,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
 
             val safeTitle = videoTitle.replace(Regex("[^a-zA-Z0-9а-яА-Я_\\-]"), "_").take(30)
             val hash = System.currentTimeMillis().toString().takeLast(6)
-            val filename = "preview_${safeTitle}_$hash.jpg"
+            val filename = "cover_${safeTitle}_$hash.jpg"
 
             var targetFolder = downloadFolder.value
             if (targetFolder.isEmpty()) {
@@ -624,7 +624,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
 
             val dbItem = DownloadItem(
                 url = url,
-                title = "Превью: $videoTitle",
+                title = "Обложка: $videoTitle",
                 filename = filename,
                 filePath = fullFilePath,
                 status = "DOWNLOADING"
@@ -632,7 +632,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
             val dbId = repository.insertDownload(dbItem).toInt()
 
             var success = false
-            var errorMessage = "Не удалось сохранить превью"
+            var errorMessage = "Не удалось сохранить обложку"
 
             try {
                 val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
@@ -661,8 +661,8 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
                 downloadProgress.value = if (success) 1.0f else 0f
                 if (success) {
                     downloadStatus.value = "Завершено"
-                    statusMessage.value = "Превью сохранено!"
-                    Toast.makeText(getApplication(), "Превью сохранено: $filename", Toast.LENGTH_SHORT).show()
+                    statusMessage.value = "Обложка сохранена!"
+                    Toast.makeText(getApplication(), "Обложка сохранена: $filename", Toast.LENGTH_SHORT).show()
                 } else {
                     downloadStatus.value = "Ошибка"
                     statusMessage.value = "Ошибка: $errorMessage"

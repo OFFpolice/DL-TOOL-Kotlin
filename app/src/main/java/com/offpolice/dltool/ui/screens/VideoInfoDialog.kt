@@ -8,8 +8,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,7 +43,7 @@ fun VideoInfoDialog(
     onConfirmDownload: (VideoFormatOption) -> Unit
 ) {
     var selectedOption by remember {
-        mutableStateOf(videoInfo.formats.firstOrNull() ?: VideoFormatOption("best", "Максимальное (MP4)", "mp4", "Авто", false))
+        mutableStateOf(videoInfo.formats.firstOrNull() ?: VideoFormatOption("best", "Авто", "mp4", "best", false))
     }
 
     Dialog(
@@ -68,32 +69,12 @@ fun VideoInfoDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(AccentBlue.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.HighQuality,
-                                contentDescription = null,
-                                tint = AccentBlue,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        Text(
-                            text = "Выберите качество",
-                            color = TextWhite,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Text(
+                        text = "Выберите качество",
+                        color = TextWhite,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -213,7 +194,16 @@ fun VideoInfoDialog(
                         .fillMaxWidth()
                         .heightIn(max = 300.dp)
                 ) {
-                    items(videoInfo.formats) { option ->
+                    itemsIndexed(
+                        items = videoInfo.formats,
+                        span = { index, _ ->
+                            if (index == videoInfo.formats.lastIndex && videoInfo.formats.size % 2 != 0) {
+                                GridItemSpan(2)
+                            } else {
+                                GridItemSpan(1)
+                            }
+                        }
+                    ) { index, option ->
                         val isSelected = option.formatId == selectedOption.formatId
 
                         val cardBg by animateColorAsState(

@@ -2,6 +2,14 @@ import os
 import sys
 import json
 import urllib.request
+import subprocess
+
+# Disable native subprocess executions to prevent Chaquopy _posixsubprocess SIGSEGV on Android
+def _disabled_popen(*args, **kwargs):
+    raise FileNotFoundError("Subprocesses are not available on Android")
+
+subprocess.Popen = _disabled_popen
+
 import yt_dlp
 
 def check_ytdlp_version():
@@ -78,6 +86,10 @@ def get_video_info(url):
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
+            'no_color': True,
+            'ffmpeg_location': None,
+            'hls_prefer_native': True,
+            'skip_download': True,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -166,10 +178,10 @@ def get_video_info(url):
             formats_list.sort(key=lambda x: x.get('height', 0), reverse=True)
             
             # Insert best combined MP4 at top
-            top_size_str = format_bytes_str(max_calculated_bytes) if max_calculated_bytes > 0 else "Макс."
+            top_size_str = format_bytes_str(max_calculated_bytes) if max_calculated_bytes > 0 else "best"
             formats_list.insert(0, {
                 "format_id": "best[ext=mp4]/best",
-                "label": "Максимальное качество",
+                "label": "Авто",
                 "ext": "mp4",
                 "size": top_size_str,
                 "height": 9999,
@@ -180,7 +192,7 @@ def get_video_info(url):
             audio_size_str = format_bytes_str(best_audio_bytes) if best_audio_bytes > 0 else "Аудио"
             formats_list.append({
                 "format_id": "bestaudio[ext=m4a]/bestaudio/best",
-                "label": "Только аудио",
+                "label": "Аудио",
                 "ext": "m4a",
                 "size": audio_size_str,
                 "height": 0,
@@ -191,7 +203,7 @@ def get_video_info(url):
             if thumbnail:
                 formats_list.append({
                     "format_id": "thumbnail",
-                    "label": "Превью (Обложка)",
+                    "label": "Обложка",
                     "ext": "jpg",
                     "size": "Картинка",
                     "height": -1,
@@ -260,6 +272,12 @@ def download_video(url, download_path, filename, format_id="best[ext=mp4]/best",
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
+            'no_color': True,
+            'ffmpeg_location': None,
+            'hls_prefer_native': True,
+            'nopart': True,
+            'fixup': 'never',
+            'concurrent_fragment_downloads': 1,
             'progress_hooks': [my_hook],
         }
         
