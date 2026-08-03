@@ -1,0 +1,203 @@
+package com.offpolice.dltool.ui.screens
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Launch
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.offpolice.dltool.R
+import com.offpolice.dltool.ui.theme.*
+
+@Composable
+fun AboutScreen(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(16.dp)
+    ) {
+        AppHeaderTitle()
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(StatusBlue, RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "DL",
+                            color = TextWhite,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column {
+                        Text(
+                            text = "DL-TOOL",
+                            color = TextWhite,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "v1.0.0 • by OFFpolice",
+                            color = TextGray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "DL-TOOL — приложение для скачивания видео с популярных платформ. Поддерживает YouTube, Instagram, TikTok и многие другие сайты.",
+                    color = TextWhite,
+                    fontSize = 14.sp,
+                    lineHeight = 22.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
+            ) {
+                Text(
+                    text = "Связь с разработчиком",
+                    color = TextWhite,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                SocialLinkItem(
+                    label = "Telegram",
+                    url = "https://telegram.me/OFFpolice",
+                    iconRes = R.drawable.ic_telegram,
+                    iconTint = Color(0xFF29B6F6),
+                    context = context
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                SocialLinkItem(
+                    label = "X (Twitter)",
+                    url = "https://x.com/OFFpolice2077",
+                    iconRes = R.drawable.ic_x_twitter,
+                    iconTint = Color.White,
+                    context = context
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                SocialLinkItem(
+                    label = "Instagram",
+                    url = "https://www.instagram.com/offpolice2077",
+                    iconRes = R.drawable.ic_instagram,
+                    iconTint = Color(0xFFE4405F),
+                    context = context
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SocialLinkItem(
+    label: String,
+    url: String,
+    iconRes: Int,
+    iconTint: Color,
+    context: Context
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clickable {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Не удалось открыть ссылку", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = label,
+                tint = iconTint,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = label,
+                color = TextWhite,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Icon(
+            imageVector = Icons.Default.Launch,
+            contentDescription = "Open",
+            tint = TextGray,
+            modifier = Modifier.size(16.dp)
+        )
+    }
+}
